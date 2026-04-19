@@ -38,6 +38,82 @@
  2. ZALOZENIA
 =================================================================
 
+  -----------------------------------------------------------------
+  2.1  SLOWNIK POJEC
+  -----------------------------------------------------------------
+
+  SPH (Service Payment Handler)
+    Modul centralny zarzadzajacy transferem uslug miedzy urzadzeniami
+    a Konsumentami. Decyduje, ktore urzadzenia powinny dostarczac
+    uslugi (COMMIT) a ktore odpoczywac (ABSTAIN) w kazdym cyklu.
+
+  SUS (Service Unit Store)
+    Bufor przechowujacy jednostki uslug na zapas. Gdy dostawcow jest
+    za duzo (>K1), nadmiar trafia do SUS. Gdy za malo (<K0), SUS
+    uzupelnia brakujace. Pojemnosc: nSUS = 20 jednostek.
+
+  COMMIT
+    Decyzja urzadzenia o podjeciu proby dostarczenia uslugi.
+    Wiaze sie z kosztem dostarczenia (kappa) i ryzykiem awarii (phi_i).
+    W razie sukcesu: urzadzenie dostaje platnosc i awansuje do
+    nastepnej fazy. W razie awarii: placi koszt naprawy (rho_i)
+    i odpada na 1 cykl.
+
+  ABSTAIN
+    Decyzja urzadzenia o wstrzymaniu sie od dostarczenia.
+    Brak kosztow, brak przychodow. Urzadzenie przechodzi w DOWN
+    na 1 cykl i wraca w fazie 1.
+
+  Faza urzadzenia (i = 1..5)
+    Opisuje "wiek" urzadzenia od ostatniego resetu. Im wyzsza faza:
+    - wyzsze ryzyko awarii (phi_i rosnie: 0.1 -> 0.2 -> 0.3 -> 0.4 -> 1.0)
+    - wyzszy koszt naprawy (rho_i rosnie: 0.5 -> 0.5 -> 0.7 -> 1.5 -> 3.0)
+    - ale tez wyzsza platnosc (h(i) = i, wiec faza 4 = 4x platnosc fazy 1)
+    Faza 5 jest finalna (phi_5 = 1.0, awaria pewna -- nigdy nie COMMIT).
+    Po awarii lub ABSTAIN urzadzenie wraca do fazy 1.
+
+  Okno waluacji [K0, K1] = [100, 120]
+    Przedzial liczby dostawcow, w ktorym Konsumenci placa za uslugi.
+    Jezeli w danym cyklu liczba dostarczonych uslug (po korekcie SUS)
+    miesci sie w [100, 120], waluacja = 100. W przeciwnym razie = 0.
+    Zbyt malo dostawcow = brak uslug. Zbyt duzo = rynek przesycony.
+    To waskie okno (21 wartosci z ~250 urzadzen) jest glownym
+    wyzwaniem optymalizacyjnym.
+
+  Waluacja g(u)
+    Funkcja oceny satysfakcji Konsumentow w danym cyklu.
+    g(u) = K0 = 100 gdy K0 <= u <= K1, g(u) = 0 w.p.p.
+    Maksymalna wartosc: 100 (gdy dostawcy trafiaja w okno).
+    Wartosc srednia z ostatnich 100 cykli (avg_val_last100) to
+    glowna metryka -- mierzy jak stabilnie system dostarcza uslugi.
+    Maksimum avg_val_last100 = 100 (trafienie w okno w kazdym cyklu).
+
+  Zysk netto urzadzenia (avg_net_profit)
+    Laczne przychody minus laczne koszty urzadzenia przez T cykli,
+    usrednione po wszystkich nU urzadzeniach.
+    Skladniki: platnosci za dostarczenia (+), koszty dostarczenia kappa (-),
+    koszty napraw rho_i (-). Cel: > 0 (urzadzenia nie dokładaja do interesu).
+
+  Wskaznik ciaglości dostaw (delivery_ratio)
+    Procent decyzji COMMIT zakonczonych pomyslnym dostarczeniem
+    (bez awarii). Im wyzszy, tym mniej "zmarnowanych" proob.
+
+  SPH-STP (Service Transfer Policy)
+    Algorytm optymalizujacy uzycie bufora SUS -- ile jednostek
+    wlozyc do bufora (z) i ile wyjac (y) w kazdym cyklu.
+    Dziala automatycznie, nie jest parametrem strategii.
+
+  h(i) = i^alpha
+    Funkcja podzialu platnosci miedzy dostawcow. Przy alpha=1:
+    dostawca w fazie i dostaje i-krotnosc udzialu fazy 1.
+    Np. faza 4 dostaje 4/(1+2+3+4) = 40% puli (jesli po 1 dostawcy
+    na faze). To motywuje urzadzenia do commitowania w wyzszych
+    fazach mimo wiekszego ryzyka.
+
+  -----------------------------------------------------------------
+  2.2  PARAMETRY MODELU
+  -----------------------------------------------------------------
+
   Parametry modelu (stale, z dokumentu):
   ---------------------------------------------------------------
   | Parametr       | Wartosc                | Opis              |
@@ -54,20 +130,67 @@
   | seed           | 42                     | ziarno losowe      |
   ---------------------------------------------------------------
 
-  Platnosci:
-    * Platnosc proporcjonalna do h(i) = i^alpha
-    * Przy alpha=1: dostawca w fazie 4 dostaje 4x wiecej niz w fazie 1
-    * SPH-STP optymalizuje uzycie bufora SUS automatycznie
+  Kluczowe obserwacje o parametrach:
+    * Przy nU=250 w stanie rownowagi ~120-140 urzadzen jest UP
+      (bo kazde COMMIT lub ABSTAIN daje DOWN na 1 cykl).
+    * Aby trafic w okno [100, 120] dostawcow, trzeba ok. 75-85%
+      UP-urzadzen w COMMIT, uwzgledniajac awarie.
+    * Bufor SUS (20 jednostek) stabilizuje wahania, ale nie
+      kompensuje duzych odchylen od okna.
+    * seed=42 zapewnia reprodukowalnosc -- kazdy moze zweryfikowac
+      wyniki uruchamiajac te same komendy.
 
-  Dostepne strategie:
-    * naive       -- COMMIT z prawdop. zeta (niezaleznie od fazy)
-    * threshold   -- COMMIT tylko dla faz <= max_phase
-    * phase_prob  -- COMMIT z prawdop. per faza (lista probs)
-    * incentive   -- COMMIT gdy E[zysk netto] > 0
-    * adaptive    -- COMMIT zalezne od poziomu bufora SUS
+  -----------------------------------------------------------------
+  2.3  PLATNOSCI
+  -----------------------------------------------------------------
 
-  Baseline do pobicia:
-    naive --zeta 0.75: avg_val=92, profit=+140.76
+  * Laczna pula platnosci: P = g(u - z + y) + z - y
+    (waluacja skorygowana o operacje bufora SUS)
+  * Podzial miedzy dostawcow proporcjonalny do h(i) = i^alpha
+  * Przy alpha=1: dostawca w fazie 4 dostaje 4x wiecej niz w fazie 1
+  * SPH-STP optymalizuje uzycie bufora SUS automatycznie
+
+  -----------------------------------------------------------------
+  2.4  DOSTEPNE STRATEGIE
+  -----------------------------------------------------------------
+
+  * naive       -- COMMIT z prawdop. zeta (niezaleznie od fazy)
+                   Parametr: --zeta (0.0 .. 1.0)
+
+  * threshold   -- COMMIT tylko dla faz <= max_phase, reszta ABSTAIN
+                   Parametr: --max_phase (1 .. 4)
+
+  * phase_prob  -- COMMIT z oddzielnym prawdop. per faza (lista probs)
+                   Parametr: --probs p1,p2,p3,p4,p5
+                   Daje pelna kontrole nad intensywnoscia per faza.
+
+  * incentive   -- COMMIT gdy oczekiwany zysk netto > 0
+                   Parametr: --expected_P (zakladana pula platnosci)
+
+  * adaptive    -- COMMIT zalezne od poziomu bufora SUS
+                   Parametr: --s_target (prog zajętości SUS, 5..15)
+
+  -----------------------------------------------------------------
+  2.5  METRYKI OCENY (KPI)
+  -----------------------------------------------------------------
+
+  | Metryka              | Opis                                  | Cel        |
+  |----------------------|---------------------------------------|------------|
+  | avg_val_last100      | Sr. waluacja z ostatnich 100 cykli    | MAX -> 100 |
+  | cum_val_total        | Laczna waluacja (T=1000 cykli)        | MAX        |
+  | avg_net_profit       | Sr. zysk netto na urzadzenie          | > 0        |
+  | delivery_ratio       | % COMMIT zakonczonych sukcesem        | wysoki     |
+  | avg_providers_l100   | Sr. liczba dostawcow (ost. 100 cykli) | 100..120   |
+
+  Najwazniejsza metryka: avg_val_last100.
+  Maksimum teoretyczne: 100 (g(u)=100 w kazdym cyklu).
+
+  -----------------------------------------------------------------
+  2.6  BASELINE DO POBICIA
+  -----------------------------------------------------------------
+
+  Baseline (naive --zeta 0.75):
+    avg_val=92, profit=+140.76
 
   Model referencyjny (dostarczony osobno):
     avg_val=92, profit=+189.49
