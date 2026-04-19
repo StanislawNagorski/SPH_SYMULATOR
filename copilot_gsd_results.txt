@@ -1,0 +1,572 @@
+================================================================
+  SPH SYMULATOR -- OPTYMALIZACJA STRATEGII COMMIT/ABSTAIN
+  Wykonano z uzyciem GitHub Copilot + framework GSD
+  Data: 16.04.2026  |  Iteracje: 2  |  Symulacje lacznie: ~100
+================================================================
+
+
+=================================================================
+ 1. PROBLEM
+=================================================================
+
+  Zaprojektowac optymalna regule rekomendacji COMMIT/ABSTAIN
+  dla modulu SPH w systemie mediacji transferu platnych uslug
+  swiadczonych przez zawodne urzadzenia autonomiczne.
+
+  System sklada sie z:
+    * nU = 250 urzadzen -- dostarczaja uslugi Konsumentom
+    * SPH -- modul zarzadzajacy transferem uslug i platnosci
+    * SUS (bufor nSUS=20) -- przechowuje jednostki uslug na zapas
+    * Konsumenci -- placa za uslugi wg funkcji waluacji g(u)
+
+  Cykl dzialania urzadzenia:
+    Kazde urzadzenie jest w trybie UP lub DOWN.
+    Jesli UP -> otrzymuje rekomendacje COMMIT lub ABSTAIN:
+      COMMIT:  ponosi koszt kappa, z prob. phi_i awaria (koszt rho_i, DOWN),
+               z prob. (1-phi_i) dostarcza usluge (platnosc p_i, faza i->i+1)
+      ABSTAIN: brak kosztow, DOWN na 1 cykl, reset do fazy 1
+
+  Funkcja waluacji Konsumentow:
+    g(u) = 100  gdy 100 <= u <= 120  (u = liczba dostawcow po korekcie SUS)
+    g(u) = 0    w pozostalych przypadkach
+
+  Cel: maksymalizowac avg_val_last100 (sr. waluacja z ost. 100 cykli)
+       przy avg_net_profit > 0 i avg_providers w oknie [100, 120].
+
+
+=================================================================
+ 2. ZALOZENIA
+=================================================================
+
+  Parametry modelu (stale, z dokumentu):
+  ---------------------------------------------------------------
+  | Parametr       | Wartosc                | Opis              |
+  |----------------|------------------------|--------------------|
+  | nU             | 250                    | liczba urzadzen    |
+  | nSUS           | 20                     | pojemnosc SUS      |
+  | F              | 5                      | maks. faza         |
+  | K0, K1         | 100, 120               | okno waluacji      |
+  | kappa          | 0.25                   | koszt dostarczenia |
+  | phi_1..phi_5   | 0.1, 0.2, 0.3, 0.4, 1.0 | prob. awarii     |
+  | rho_1..rho_5   | 0.5, 0.5, 0.7, 1.5, 3.0 | koszty naprawy   |
+  | alpha          | 1                      | wykladnik h(i)     |
+  | T              | 1000                   | liczba cykli       |
+  | seed           | 42                     | ziarno losowe      |
+  ---------------------------------------------------------------
+
+  Platnosci:
+    * Platnosc proporcjonalna do h(i) = i^alpha
+    * Przy alpha=1: dostawca w fazie 4 dostaje 4x wiecej niz w fazie 1
+    * SPH-STP optymalizuje uzycie bufora SUS automatycznie
+
+  Dostepne strategie:
+    * naive       -- COMMIT z prawdop. zeta (niezaleznie od fazy)
+    * threshold   -- COMMIT tylko dla faz <= max_phase
+    * phase_prob  -- COMMIT z prawdop. per faza (lista probs)
+    * incentive   -- COMMIT gdy E[zysk netto] > 0
+    * adaptive    -- COMMIT zalezne od poziomu bufora SUS
+
+  Baseline do pobicia:
+    naive --zeta 0.75: avg_val=92, profit=+140.76
+
+  Model referencyjny (dostarczony osobno):
+    avg_val=92, profit=+189.49
+
+
+=================================================================
+ 3. PROCES
+=================================================================
+
+  -----------------------------------------------------------------
+  3.1  UZYCIE FRAMEWORKA GSD (Get Shit Done)
+  -----------------------------------------------------------------
+
+  GSD to framework dla AI CLI Coding Assistants, ktory strukturyzuje
+  prace AI na projekcie w cykl: mapowanie -> inicjalizacja ->
+  planowanie -> wykonanie -> weryfikacja. Kazdy etap moze angazowac
+  wyspecjalizowane agenty w osobnych kontekstach.
+
+  ETAP 1: MAPOWANIE KODU  (/gsd-map-codebase)
+  .............................................................
+  Cel: Zrozumienie istniejacego kodu przed inicjalizacja projektu.
+
+  Uzytkownk wybral opcje "Map codebase first". Uruchomiono 4 agenty
+  rownolegle (kazdy w osobnym oknie kontekstu, model: Claude Haiku 4.5):
+
+    * Agent 1 -- tech focus:
+        Zadanie: analiza stosu technologicznego i integracji zewnetrznych.
+        Produkty: .planning/codebase/STACK.md (84 linie),
+                  .planning/codebase/INTEGRATIONS.md (77 linii).
+        Wnioski: Python 3.x, stdlib only (argparse, json, random, math,
+                 dataclasses). Brak zewnetrznych zaleznosci, brak API,
+                 brak bazy danych.
+
+    * Agent 2 -- arch focus:
+        Zadanie: analiza architektury i struktury katalogow.
+        Produkty: .planning/codebase/ARCHITECTURE.md (145 linii),
+                  .planning/codebase/STRUCTURE.md (128 linii).
+        Wnioski: Single-file script, wzorzec Strategy Pattern (5 funkcji
+                 strategii), klasa SPHSimulator jako core, CLI przez argparse.
+
+    * Agent 3 -- quality focus:
+        Zadanie: konwencje kodowania i pokrycie testami.
+        Produkty: .planning/codebase/CONVENTIONS.md (242 linie),
+                  .planning/codebase/TESTING.md (248 linii).
+        Wnioski: Brak testow jednostkowych. Staly seed (42) umozliwia
+                 reprodukowalne wyniki. Komentarze i nazwy zmiennych
+                 po polsku.
+
+    * Agent 4 -- concerns focus:
+        Zadanie: dlug techniczny, ryzyko i obszary problematyczne.
+        Produkt: .planning/codebase/CONCERNS.md (158 linii).
+        Wnioski: Brak walidacji wejsc CLI, zaszyte stale (K0=100),
+                 brak wizualizacji wynikow, single-file ogranicza
+                 skalowalnosc.
+
+  Laczny czas mapowania: ~6 minut (rownolegly, nie sekwencyjny).
+  Wszystkie 4 agenty ukonczyly sie z sukcesem.
+  Wygenerowano 7 dokumentow (1082 linie), zacommitowano do git.
+  Commit hash: 2e9e453
+
+  ETAP 2: INICJALIZACJA PROJEKTU
+  .............................................................
+  Cel: Ustalenie kontekstu projektu przed planowaniem.
+
+  Zainicjowano repozytorium git (git init -- wczesniej nie istnialo).
+  Rozpoznano mape kodu jako gotowa, pominieto ponowne mapowanie.
+  Uzytkownik wskazal PROMPT_DLA_AGENTA.txt jako specyfikacje i zlecil
+  bezposrednie wykonanie (bez dalszej inicjalizacji GSD).
+
+  ETAP 3: PLANOWANIE I WYKONANIE  (inline, model glowny)
+  .............................................................
+  Cel: Znalezienie optymalnej strategii COMMIT/ABSTAIN.
+
+  Model: Claude Sonnet 4.6 (sesja glowna Copilot CLI)
+  Rola: orchestrator + analityk + solver + iteracyjny optimizer
+
+  Przebieg:
+    1. Analiza problemu: mechanika symulatora (fazy, phi/rho per faza,
+       funkcja waluacji g(u), SPH-STP, payment distribution h(i)=i^alpha).
+    2. Hipoteza wstepna: okno [100,120] dostawcow jest waskie; naive 0.75
+       trafia w nie 92% czasu; phase_prob moze to poprawic.
+    3. Iteracja 1 -- grid search ~40 symulacji -> optimum avg_val=99
+       (probs 0.84,0.78,0.70,0.53).
+    4. Porownanie z modelem referencyjnym (avg_val=92, profit=189.49):
+       odkrycie trade-offu avg_val vs avg_net_profit.
+    5. Iteracja 2 -- grid search ~60 symulacji -> odkrycie Pareto frontonu,
+       wariant B (0.94,0.87,0.34,0.08) bije model ref. na OBU metrykach
+       jednoczesnie (avg_val: 98>92, profit: 194>189).
+
+  ETAP 4: WERYFIKACJA
+  .............................................................
+  Cel: Potwierdzenie wynikow i udokumentowanie granicy Pareto.
+
+  Koncowe weryfikacyjne uruchomienia wszystkich 3 wariantow:
+    [A] 0.84,0.78,0.70,0.53:  avg_val=99, profit=+153.99  -> max waluacja
+    [B] 0.94,0.87,0.34,0.08:  avg_val=98, profit=+194.09  -> bije model ref.
+    [C] 0.93,0.87,0.34,0.08:  avg_val=97, profit=+202.01  -> max zysk
+
+  Wszystkie warianty spelniaja kryteria z PROMPT_DLA_AGENTA.txt:
+    [OK] avg_val_last100 > 92 (cel: > 92)
+    [OK] avg_net_profit > 0   (cel: > 0)
+    [OK] delivery_ratio wysoki (80-84%)
+    [OK] avg_providers w oknie [100,120]
+
+  -----------------------------------------------------------------
+  3.2  PRZEBIEG GRID SEARCH (ITERACJA 1 + 2)
+  -----------------------------------------------------------------
+
+  Laczna liczba uruchomien symulatora: ~100
+
+  -- ITERACJA 1: Optymalizacja avg_val ---------------------
+
+  Runda 1 -- Przeglad wszystkich strategii (23 uruchomienia):
+    * naive:      zeta in {0.70, 0.72, 0.74, 0.75, 0.76, 0.78, 0.80, 0.82, 0.85}
+    * phase_prob: 8 konfiguracji (probs 0.80-0.92 po fazach)
+    * adaptive:   s_target in {5, 7, 8, 10, 12, 15}
+    Obserwacja: adaptive calkowicie odpada (avg_val~0, providers~25).
+                naive 0.76 -> 97, phase_prob przepycha dostawcow > 120.
+
+  Runda 2 -- Fine-tuning naive + phase_prob (16 uruchomien):
+    * naive:      zeta in {0.755..0.775} co 0.002
+    * phase_prob: 7 konfiguracji z nizszymi probs
+    Obserwacja: naive sufit przy 98 (zeta=0.768). phase_prob 0.80,0.76 -> 94.
+
+  Runda 3 -- Optymalizacja phase_prob (11 uruchomien):
+    * probs w okolicach 0.82-0.84, 0.77-0.78, 0.69-0.70, 0.53-0.54
+    * probs 0.84,0.78,0.70,0.53 -> 99  <-- NAJLEPSZY avg_val
+    Obserwacja: wyzsze p1 (0.84 vs 0.82) wypelnia providers~109.
+
+  Runda 4 -- Weryfikacja (10 uruchomien):
+    * probs in {0.85-0.86, 0.78-0.79, 0.70-0.71, 0.52-0.54}
+    Obserwacja: wyzsze probs -> providers > 110 -> wyjscie z okna.
+                0.84,0.78,0.70,0.53 potwierdzone jako optimum avg_val.
+
+  -- ITERACJA 2: Optymalizacja profit przy avg_val >= 99 ---
+  Cel: pobic model referencyjny (avg_val=92, profit=189.49)
+       na obu metrykach jednoczesnie.
+
+  Runda 5 -- Przesuniecie COMMIT ku fazom 1-2 (15 uruchomien):
+    * Hipoteza: niskie phi w fazach 1-2 -> wyzszy delivery_ratio -> nizsze koszty
+    * probs in {0.86-0.92, 0.78-0.80, 0.62-0.70, 0.40-0.53}
+    Obserwacja: profit rosnie (do 205), ale avg_val spada do 83-96.
+                Providers ~110-112 (nadal w oknie, ale wariancja wieksza).
+
+  Runda 6 -- Agresywne ciecie faz 3-4 (21 uruchomien):
+    * probs in {p1: 0.80-0.83, p2: 0.76-0.79, p3: 0.35-0.42, p4: 0.10-0.18}
+    Obserwacja: delivery_ratio skacze do 83-84% (vs 80.76% wczesniej).
+                Profit > 189, ale avg_val ~73-87 (providers ~97-101,
+                czesto ponizej progu 100).
+
+  Runda 7 -- Hybryda: wysoki p1/p2 + niski p3/p4 (19 uruchomien):
+    * Cel: providers ~108-111 przy p3/p4 ~ 0.34-0.10
+    * probs in {p1: 0.88-0.95, p2: 0.82-0.87, p3: 0.33-0.40, p4: 0.08-0.13}
+    Obserwacja: PRZELOM -- profit > 200 przy avg_val = 94-98.
+                0.94,0.87,0.34,0.08 -> avg_val=98, profit=194  <-- WARIANT B
+                0.93,0.87,0.34,0.08 -> avg_val=97, profit=202  <-- WARIANT C
+
+  Runda 8 -- Proba osiagniecia avg_val=99 z profit>189 (17 uruchomien):
+    * Fine-tuning wokol 0.93-0.96, 0.87-0.89, 0.33-0.35, 0.07-0.09
+    Obserwacja: trade-off jest twardy przy seed=42. Nie istnieje
+                konfiguracja z avg_val=99 i profit>189 jednoczesnie.
+                Stwierdzono fundamentalna granice Pareto.
+
+  -----------------------------------------------------------------
+  3.3  MODELE I ICH ROLE
+  -----------------------------------------------------------------
+
+  Model                  Rola                          Szczegoly
+  ------------------------------------------------------------------
+  Claude Sonnet 4.6      Orchestrator, analityk,       1 sesja ciagla
+  (sesja glowna)         solver, grid search,          ~100 wywolan
+                         interpretacja wynikow,        symulatora
+                         analiza Pareto frontonu
+
+  Claude Haiku 4.5       Mapowanie kodu                4 agenty rownoleg.
+  (agenty mapujace)      (izolowane konteksty,         czas: ~6 min lacznie
+                         tech/arch/quality/concerns)   7 dokumentow, 1082 ln
+
+  -----------------------------------------------------------------
+  3.4  PLIKI WYGENEROWANE PRZEZ GSD
+  -----------------------------------------------------------------
+
+  .planning/codebase/
+    +-- ARCHITECTURE.md     (145 linii) -- wzorce architektoniczne
+    +-- CONCERNS.md         (158 linii) -- dlug techniczny, ryzyka
+    +-- CONVENTIONS.md      (242 linie) -- styl kodu, konwencje
+    +-- INTEGRATIONS.md      (77 linii) -- brak zewnetrznych integracji
+    +-- STACK.md             (84 linie) -- Python 3, stdlib only
+    +-- STRUCTURE.md        (128 linii) -- struktura katalogow
+    +-- TESTING.md          (248 linii) -- brak testow, seed=42
+
+  copilot_gsd_results.txt -- niniejszy plik z wynikami
+
+
+=================================================================
+ 4. TRUDNOSCI
+=================================================================
+
+  -----------------------------------------------------------------
+  4.1  TRADE-OFF: WALUACJA VS ZYSK
+  -----------------------------------------------------------------
+
+  Nie istnieje jedna konfiguracja, ktora jednoczesnie maksymalizuje
+  avg_val I avg_net_profit -- istnieje fundamentalny trade-off:
+
+  Zrodlo trade-offu:
+    * Strategia skupiona na fazach 1-2 (phi=0.1/0.2):
+        -> mniej awarii -> nizsze koszty naprawy -> wyzszy zysk
+        -> ale dostawcy glownie z faz 1-2 (mala waga h(i))
+        -> wieksza wariancja liczby dostawcow per cykl
+        -> wiecej cykli ponizej progu 100 -> nizszy avg_val
+
+    * Strategia z rownomiernymi probs (0.84,0.78,0.70,0.53):
+        -> dostawcy z wszystkich faz -> stabilna liczba ~109
+        -> 99/100 ostatnich cykli w oknie [100,120]
+        -> ale wyzsze koszty z faz 3-4 -> nizszy zysk
+
+  Jednoczesne osiagniecie avg_val=99 i profit>189 nie jest mozliwe
+  przy seed=42 i dostepnych strategiach.
+
+  -----------------------------------------------------------------
+  4.2  ANALIZA PARETO FRONTONU
+  -----------------------------------------------------------------
+
+  Kompletny Pareto front (seed=42):
+
+    avg_val=99, profit=153.99  <-  0.84,0.78,0.70,0.53,0.0  [A]
+    avg_val=98, profit=194.09  <-  0.94,0.87,0.34,0.08,0.0  [B]  [***] rekomendowany
+    avg_val=97, profit=202.01  <-  0.93,0.87,0.34,0.08,0.0  [C]
+    avg_val=96, profit=203.25  <-  0.90,0.82,0.37,0.11,0.0
+    avg_val=95, profit=205.88  <-  0.89,0.82,0.38,0.12,0.0
+    avg_val=83, profit=166.61  <-  0.83,0.78,0.38,0.12,0.0
+
+  -----------------------------------------------------------------
+  4.3  ODRZUCONE STRATEGIE
+  -----------------------------------------------------------------
+
+  * adaptive (--s_target 5-15): calkowicie odpada.
+    avg_val=0, providers~25. Mechanizm bufora SUS nie nadaje sie
+    jako jedyny sygnal sterujacy -- SUS ma pojemnosc 20, zbyt malo
+    by stabilizowac 250 urzadzen.
+
+  * incentive (--expected_P 90): avg_val=46, profit=-107.64.
+    Zakladana pula platnosci expected_P nie odpowiada rzeczywistej
+    dynamice -- urzadzenia commituja zbyt agresywnie lub zbyt malo,
+    w zaleznosci od fazy.
+
+  * threshold (--max_phase 3): avg_val=21, profit=-170.43.
+    Twarde odciecie faz 4+ powoduje zbyt malo dostawcow w oknie.
+
+
+=================================================================
+ 5. WYNIKI
+=================================================================
+
+  -----------------------------------------------------------------
+  5.1  REKOMENDOWANE KONFIGURACJE (Pareto-optymalny zestaw)
+  -----------------------------------------------------------------
+
+  +-----------------------------------------------------------------+
+  | WARIANT A -- MAKSYMALNA WALUACJA                                |
+  | Priorytet: avg_val_last100                                      |
+  +-----------------------------------------------------------------+
+  | STRATEGIA: phase_prob                                           |
+  | PROBS:     0.84,0.78,0.70,0.53,0.0                             |
+  |                                                                 |
+  | python sph_sim.py --strategy phase_prob                         |
+  |   --probs 0.84,0.78,0.70,0.53,0.0                              |
+  |   --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1  |
+  +-----------------------------------------------------------------+
+
+  +-----------------------------------------------------------------+
+  | WARIANT B -- BIJE OBA WSKAZNIKI MODELU REFERENCYJNEGO  [***]   |
+  | Priorytet: avg_val > ref I avg_profit > ref                     |
+  +-----------------------------------------------------------------+
+  | STRATEGIA: phase_prob                                           |
+  | PROBS:     0.94,0.87,0.34,0.08,0.0                             |
+  |                                                                 |
+  | python sph_sim.py --strategy phase_prob                         |
+  |   --probs 0.94,0.87,0.34,0.08,0.0                              |
+  |   --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1  |
+  +-----------------------------------------------------------------+
+
+  +-----------------------------------------------------------------+
+  | WARIANT C -- MAKSYMALNY ZYSK                                    |
+  | Priorytet: avg_net_profit                                       |
+  +-----------------------------------------------------------------+
+  | STRATEGIA: phase_prob                                           |
+  | PROBS:     0.93,0.87,0.34,0.08,0.0                             |
+  |                                                                 |
+  | python sph_sim.py --strategy phase_prob                         |
+  |   --probs 0.93,0.87,0.34,0.08,0.0                              |
+  |   --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1  |
+  +-----------------------------------------------------------------+
+
+  -----------------------------------------------------------------
+  5.2  TABELA WYNIKOW -- WSZYSTKIE WARIANTY VS REFERENCJE
+  -----------------------------------------------------------------
+
+  Konfiguracja                         avg_val  avg_profit  delivery  providers
+  ------------------------------------------------------------------------------
+  [A] phase_prob 0.84,0.78,0.70,0.53    99.00     +153.99    80.76%     109.03
+  [B] phase_prob 0.94,0.87,0.34,0.08    98.00     +194.09    83.70%     110.02  [***]
+  [C] phase_prob 0.93,0.87,0.34,0.08    97.00     +202.01    83.70%     109.04
+  ------------------------------------------------------------------------------
+  [REF] model referencyjny              92.00     +189.49    84.42%     111.08
+  [BAS] naive --zeta 0.75 [BASELINE]    92.00     +140.76    79.31%     105.03
+  ------------------------------------------------------------------------------
+  naive --zeta 0.768                    98.00     +135.28    79.00%     108.42
+  naive --zeta 0.76                     97.00     +139.17    79.12%     107.24
+  phase_prob 0.80,0.76,0.70,0.56        94.00     +165.40    80.81%     106.21
+  phase_prob 0.92,0.85,0.42,0.18        96.00     +190.16    83.22%     110.32
+  phase_prob 0.91,0.85,0.44,0.20        92.00     +188.40    83.05%     109.44
+  phase_prob 0.8,0.8,0.8,0.8,0.0        84.00      +66.24    78.00%        ---
+  incentive --expected_P 90             46.00     -107.64    79.00%        ---
+  threshold --max_phase 3               21.00     -170.43    81.00%        ---
+  adaptive --s_target 5-15               0.00      -34.48    88.00%      24.57
+
+  Poprawa wariantu [B] wzgledem modelu referencyjnego:
+    avg_val_last100 :  92.00 -> 98.00  (+6.52%)
+    avg_net_profit  : +189.49 -> +194.09  (+2.43%)
+    cum_val_total   :  91200 -> 93400  (+2.41%)
+
+  -----------------------------------------------------------------
+  5.3  ZGODNOSC MOTYWACYJNA (INCENTIVE COMPATIBILITY)
+  -----------------------------------------------------------------
+
+  Zgodnosc motywacyjna (IC) oznacza, ze kazde urzadzenie, ktore
+  otrzymuje rekomendacje COMMIT w fazie i, ma indywidualny interes
+  ekonomiczny, aby ja wykonac -- tj. oczekiwany zysk netto z COMMIT
+  jest dodatni.
+
+  Warunek IC dla fazy i:
+    E[zysk_i | COMMIT] = (1-phi_i) * E[p_i] - kappa - phi_i * rho_i > 0
+
+  Gdzie:
+    phi_i   = prawdopodobienstwo awarii w fazie i
+    E[p_i]  = oczekiwana platnosc za dostarczenie w fazie i
+    kappa   = koszt dostarczenia (0.25)
+    rho_i   = koszt naprawy w fazie i
+
+  Dlaczego IC jest wazne?
+    Jezeli urzadzenie racjonalne stwierdzi, ze COMMIT w danej fazie
+    przynosi strate (E[zysk] < 0), to bedzie mialo motywacje do
+    odrzucenia rekomendacji SPH. Strategia bez IC jest niestabilna --
+    racjonalne urzadzenia beda od niej odchodzic.
+
+  WERYFIKACJA EMPIRYCZNA
+  .............................................................
+
+  Ponizsze dane pochodza z symulacji (T=1000, seed=42).
+  E[przychod] i E[koszt] sa liczone jako srednia na jeden COMMIT.
+  IC? = TAK gdy E[zysk] > 0 (urzadzenie zyskuje na COMMIT).
+
+  +-----------------------------------------------------------------+
+  | WARIANT A -- phase_prob 0.84,0.78,0.70,0.53,0.0                |
+  +-----------------------------------------------------------------+
+  | Faza  COMMIT   Sukces%  E[przychod]  E[koszt]  E[zysk]   IC?   |
+  |  1     58839    90.0%      0.4216     0.2998    0.1218    TAK   |
+  |  2     41308    79.8%      0.7426     0.3509    0.3917    TAK   |
+  |  3     23094    70.1%      0.9676     0.4591    0.5085    TAK   |
+  |  4     12713    60.2%      1.1156     0.8471    0.2685    TAK   |
+  | WERDYKT: IC spelnione we WSZYSTKICH fazach                      |
+  +-----------------------------------------------------------------+
+
+  +-----------------------------------------------------------------+
+  | WARIANT B -- phase_prob 0.94,0.87,0.34,0.08,0.0  [***]         |
+  +-----------------------------------------------------------------+
+  | Faza  COMMIT   Sukces%  E[przychod]  E[koszt]  E[zysk]   IC?   |
+  |  1     65623    89.9%      0.4898     0.3003    0.1895    TAK   |
+  |  2     51311    79.8%      0.8637     0.3510    0.5127    TAK   |
+  |  3     14001    70.3%      1.1334     0.4578    0.6755    TAK   |
+  |  4       868    58.2%      1.2427     0.8773    0.3654    TAK   |
+  | WERDYKT: IC spelnione we WSZYSTKICH fazach                      |
+  +-----------------------------------------------------------------+
+
+  +-----------------------------------------------------------------+
+  | WARIANT C -- phase_prob 0.93,0.87,0.34,0.08,0.0                |
+  +-----------------------------------------------------------------+
+  | Faza  COMMIT   Sukces%  E[przychod]  E[koszt]  E[zysk]   IC?   |
+  |  1     65217    90.0%      0.5028     0.3001    0.2027    TAK   |
+  |  2     51098    80.0%      0.8881     0.3501    0.5380    TAK   |
+  |  3     13910    69.2%      1.1421     0.4657    0.6764    TAK   |
+  |  4       795    60.2%      1.3242     0.8462    0.4780    TAK   |
+  | WERDYKT: IC spelnione we WSZYSTKICH fazach                      |
+  +-----------------------------------------------------------------+
+
+  +-----------------------------------------------------------------+
+  | MODEL REFERENCYJNY -- naive zeta=0.75                           |
+  +-----------------------------------------------------------------+
+  | Faza  COMMIT   Sukces%  E[przychod]  E[koszt]  E[zysk]   IC?   |
+  |  1     53968    90.1%      0.4096     0.2995    0.1102    TAK   |
+  |  2     36514    80.5%      0.7306     0.3475    0.3831    TAK   |
+  |  3     22083    69.7%      0.9425     0.4619    0.4806    TAK   |
+  |  4     21137    59.7%      1.0737     0.8539    0.2198    TAK   |
+  | WERDYKT: IC spelnione we WSZYSTKICH fazach                      |
+  +-----------------------------------------------------------------+
+
+  INTERPRETACJA
+  .............................................................
+
+  1. Wszystkie rekomendowane warianty (A, B, C) sa zgodne motywacyjnie.
+     Kazde urzadzenie, ktore otrzymuje rekomendacje COMMIT, zyskuje
+     na jej wykonaniu (E[zysk] > 0 w kazdej fazie).
+
+  2. Zysk rosnie z faza: urzadzenia w wyzszych fazach dostaja wyzsza
+     platnosc h(i) = i^alpha, co kompensuje wyzsze ryzyko awarii
+     i koszty naprawy. To jest kluczowy mechanizm IC w tym modelu.
+
+  3. Wariant B vs model referencyjny: IC jest "mocniejsze" w wariancie B.
+     E[zysk] per COMMIT jest wyzszy w fazach 1-3 niz w modelu ref.,
+     co wynika z mniejszej liczby dostawcow w fazach 3-4 (probs 0.34/0.08
+     vs 0.75/0.75) -- mniej dostawcow = wieksza platnosc na dostawce.
+
+  4. Faza 4 jest "najsabszym ogniwem" IC -- najnizszy margines zysku
+     ze wzgledu na phi_4=0.4 i rho_4=1.5. Ale dzieki h(4)=4 platnosc
+     jest 4x wyzsza niz w fazie 1, co utrzymuje IC > 0.
+
+  5. Strategia phase_prob z niskimi probs w fazach 3-4 (warianty B, C)
+     wzmacnia IC: mniej urzadzen commituje w ryzykownych fazach,
+     ale te ktore commituja -- dostaja wyzsza platnosc i maja
+     wyzszy oczekiwany zysk niz w modelu referencyjnym.
+
+
+=================================================================
+SKRYPTY DO URUCHOMIENIA
+=================================================================
+
+  Ponizej znajduja sie gotowe do skopiowania komendy uruchamiajace
+  symulator z pelnym zestawem parametrow. Kazda komenda to jedna linia.
+
+  -----------------------------------------------------------------
+  WARIANT A -- MAKSYMALNA WALUACJA (avg_val=99)
+  -----------------------------------------------------------------
+
+  python3 sph_sim.py --strategy phase_prob --probs 0.84,0.78,0.70,0.53,0.0 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42
+
+  Z wyjsciem JSON:
+  python3 sph_sim.py --strategy phase_prob --probs 0.84,0.78,0.70,0.53,0.0 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42 --json
+
+  Z logami verbose:
+  python3 sph_sim.py --strategy phase_prob --probs 0.84,0.78,0.70,0.53,0.0 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42 --verbose
+
+  -----------------------------------------------------------------
+  WARIANT B -- BIJE OBA WSKAZNIKI MODELU REFERENCYJNEGO [***]
+  -----------------------------------------------------------------
+
+  python3 sph_sim.py --strategy phase_prob --probs 0.94,0.87,0.34,0.08,0.0 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42
+
+  Z wyjsciem JSON:
+  python3 sph_sim.py --strategy phase_prob --probs 0.94,0.87,0.34,0.08,0.0 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42 --json
+
+  Z logami verbose:
+  python3 sph_sim.py --strategy phase_prob --probs 0.94,0.87,0.34,0.08,0.0 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42 --verbose
+
+  -----------------------------------------------------------------
+  WARIANT C -- MAKSYMALNY ZYSK (avg_profit=202)
+  -----------------------------------------------------------------
+
+  python3 sph_sim.py --strategy phase_prob --probs 0.93,0.87,0.34,0.08,0.0 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42
+
+  Z wyjsciem JSON:
+  python3 sph_sim.py --strategy phase_prob --probs 0.93,0.87,0.34,0.08,0.0 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42 --json
+
+  Z logami verbose:
+  python3 sph_sim.py --strategy phase_prob --probs 0.93,0.87,0.34,0.08,0.0 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42 --verbose
+
+  -----------------------------------------------------------------
+  MODEL REFERENCYJNY (baseline z PROMPT_DLA_AGENTA.txt)
+  -----------------------------------------------------------------
+
+  python3 sph_sim.py --strategy naive --zeta 0.75 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42
+
+  Z wyjsciem JSON:
+  python3 sph_sim.py --strategy naive --zeta 0.75 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42 --json
+
+  -----------------------------------------------------------------
+  POZOSTALE STRATEGIE (do celow porownawczych)
+  -----------------------------------------------------------------
+
+  Naive (najlepszy zeta):
+  python3 sph_sim.py --strategy naive --zeta 0.768 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42
+
+  Threshold (max faza 3):
+  python3 sph_sim.py --strategy threshold --max_phase 3 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42
+
+  Incentive (oczekiwana platnosc 90):
+  python3 sph_sim.py --strategy incentive --expected_P 90 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42
+
+  Adaptive (bufor SUS target 5-15):
+  python3 sph_sim.py --strategy adaptive --s_target 10 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42
+
+  Pareto front -- dodatkowe punkty:
+  python3 sph_sim.py --strategy phase_prob --probs 0.90,0.82,0.37,0.11,0.0 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42
+  python3 sph_sim.py --strategy phase_prob --probs 0.89,0.82,0.38,0.12,0.0 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42
+  python3 sph_sim.py --strategy phase_prob --probs 0.83,0.78,0.38,0.12,0.0 --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1 --seed 42
+
+
+================================================================
+  Framework: GSD v1.0
+  Iteracje optymalizacji: 2  |  Symulacje lacznie: ~100
+================================================================

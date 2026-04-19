@@ -1,0 +1,194 @@
+# PROMPT DLA AGENTA AI — SPH Simulator
+# MEDIACJA TRANSFERU PŁATNYCH USŁUG
+
+# ──────────────────────────────────────────────────────────────────
+# KONTEKST I ZADANIE
+# ──────────────────────────────────────────────────────────────────
+
+Jesteś ekspertem od teorii gier i systemów wieloagentowych.
+Twoim zadaniem jest zaprojektowanie optymalnej reguły rekomendacji COMMIT/ABSTAIN
+dla modułu SPH w systemie mediacji transferu płatnych usług świadczonych
+przez zawodne urządzenia autonomiczne.
+
+Zaproponuj JEDNĄ strategię i zwróć JEDNĄ gotową komendę do uruchomienia symulatora.
+
+# ──────────────────────────────────────────────────────────────────
+# OPIS SYSTEMU
+# ──────────────────────────────────────────────────────────────────
+
+System składa się z:
+1. URZĄDZENIA (nU sztuk) — dostarczają usługi Konsumentom
+2. SPH — moduł zarządzający transferem usług i płatności
+3. SUS (bufor) — przechowuje do nSUS jednostek usług na zapas
+4. KONSUMENCI — płacą za usługi wg funkcji g(u)
+
+## Cykl działania urządzenia (co jeden cykl t = 1,2,...):
+
+Każde urządzenie jest w trybie UP lub DOWN.
+
+Jeśli UP → wybiera decyzję:
+
+  COMMIT:
+    - ponosi koszt dostarczenia κ_i (zależny od fazy)
+    - z prawdopodobieństwem φ_i dochodzi do awarii:
+        → płaci koszt naprawy ρ_i
+        → przechodzi w DOWN (1 cykl), wraca do UP w fazie 1
+    - z prawdopodobieństwem (1 - φ_i) dostarcza usługę:
+        → dostaje płatność p_i
+        → przechodzi do następnej fazy (i → i+1)
+
+  ABSTAIN:
+    - nie ponosi żadnych kosztów
+    - przechodzi w DOWN na 1 cykl (utrzymanie), wraca do UP w fazie 1
+
+Jeśli DOWN → odpoczynek/naprawa, po 1 cyklu wraca do UP, faza 1
+
+## Fazy urządzenia:
+- Fazy: i ∈ {1, 2, 3, 4, 5} (F=5 to faza finalna, φ_5=1.0, nigdy nie COMMIT)
+- Im wyższa faza → wyższe ryzyko awarii i wyższy koszt naprawy
+- Po awarii lub ABSTAIN: reset do fazy 1
+- Po pomyślnym dostarczeniu: faza i → i+1
+
+## Parametry modelu:
+
+| Parametr          | Wartość       | Opis                                 |
+|-------------------|---------------|--------------------------------------|
+| nU                | 250           | liczba urządzeń                      |
+| nSUS              | 20            | pojemność bufora SUS                 |
+| F                 | 5             | maksymalna faza                      |
+| K0                | 100           | dolny próg waluacji Konsumentów      |
+| K1                | 120           | górny próg waluacji Konsumentów      |
+| κ (kappa)         | 0.25          | koszt dostarczenia (wszystkie fazy)  |
+| ρ_1..ρ_5 (rho)    | 0.5,0.5,0.7,1.5,3.0 | koszty naprawy per faza       |
+| φ_1..φ_5 (phi)    | 0.1,0.2,0.3,0.4,1.0 | prob. awarii per faza         |
+| T                 | 1000          | liczba cykli symulacji               |
+| α (alpha)         | 1             | wykładnik funkcji h(i)=i^α           |
+| seed              | 42            | ziarno losowe                        |
+
+## Funkcja waluacji Konsumentów:
+
+g(u) = K0 = 100   gdy K0 ≤ u ≤ K1  (tj. gdy 100 ≤ u ≤ 120)
+g(u) = 0          w pozostałych przypadkach
+
+Gdzie u = liczba dostarczonych usług w danym cyklu (po korekcie buforem SUS).
+
+KLUCZOWE: waluacja wynosi 100 tylko gdy liczba dostawców (po korekcie SUS) mieści się w oknie [100, 120].
+Gdy za mało lub za dużo dostawców → g(u) = 0 → brak przychodu.
+
+## Płatności:
+
+- Łączna płatność dla urządzeń: P = g(u - x*) + x*, gdzie x* optymalizuje SPH-STP
+- Płatność dla dostawcy w fazie i proporcjonalna do h(i) = i^α
+  → przy α=1: dostawca w fazie 4 dostaje 4× więcej niż w fazie 1
+- SPH-STP (polityka transferu bufora) optymalizuje użycie bufora automatycznie
+
+## Informacje dostępne dla strategii (każdy cykl):
+
+Strategia zna:
+- l = wektor liczb dostawców per faza [l_1, l_2, l_3, l_4] z poprzedniego cyklu
+- s = bieżąca zajętość bufora SUS (0..20)
+- faza urządzenia (1..4, faza 5 nigdy nie COMMIT)
+- status urządzenia (UP/DOWN)
+
+# ──────────────────────────────────────────────────────────────────
+# DOSTĘPNE STRATEGIE I PARAMETRY
+# ──────────────────────────────────────────────────────────────────
+
+Masz do dyspozycji PIĘĆ strategii (musisz wybrać jedną):
+
+## 1. naive
+Każde urządzenie UP dostaje COMMIT z prawdopodobieństwem ζ (niezależnie od fazy).
+
+Parametr: --zeta X   (X w zakresie 0.0 .. 1.0)
+Przykład: --strategy naive --zeta 0.75
+
+## 2. threshold
+COMMIT tylko dla urządzeń w fazach ≤ max_phase. Wyższe fazy dostają ABSTAIN.
+
+Parametr: --max_phase X   (X w zakresie 1 .. 4)
+Przykład: --strategy threshold --max_phase 2
+
+## 3. phase_prob
+Każda faza ma własne niezależne prawdopodobieństwo COMMIT.
+Daje pełną kontrolę — można różnicować intensywność per faza.
+
+Parametr: --probs p1,p2,p3,p4,p5   (wartości 0.0..1.0 dla faz 1..5)
+           Ostatnia wartość (dla fazy 5) jest ignorowana (φ_5=1.0, zawsze ABSTAIN)
+Przykład: --strategy phase_prob --probs 0.9,0.8,0.7,0.4,0.0
+
+## 4. incentive
+COMMIT tylko gdy oczekiwany zysk netto > 0:
+E[zysk] = (1-φ_i) * expected_payment_i - κ - φ_i * ρ_i > 0
+
+Parametr: --expected_P X   (X = zakładana łączna pula płatności do podziału)
+Przykład: --strategy incentive --expected_P 90
+
+## 5. adaptive
+P(COMMIT) zmienia się w zależności od poziomu bufora SUS:
+- s < s_target      → P(COMMIT) = 0.9  (bufor pusty → dużo dostaw)
+- s_target ≤ s < 2*s_target → P(COMMIT) = 0.5
+- s ≥ 2*s_target    → P(COMMIT) = 0.2  (bufor pełny → oszczędzamy)
+
+Parametr: --s_target X   (X = próg zajętości SUS, sensowny zakres 5..15)
+Przykład: --strategy adaptive --s_target 8
+
+# ──────────────────────────────────────────────────────────────────
+# METRYKI OCENY (KPI)
+# ──────────────────────────────────────────────────────────────────
+
+| Metryka              | Opis                                      | Cel          |
+|----------------------|-------------------------------------------|--------------|
+| avg_val_last100      | Śr. waluacja Konsumentów (ost. 100 cykli) | MAX → 100    |
+| cum_val_total        | Łączna waluacja (T=1000 cykli)            | MAX → 100000 |
+| avg_net_profit       | Śr. zysk netto urządzenia                 | > 0          |
+| delivery_ratio       | % decyzji COMMIT zakończonych sukcesem    | wysoki       |
+| avg_providers_l100   | Śr. liczba dostawców (ost. 100 cykli)     | ≈ 100..120   |
+
+Najważniejszy jest avg_val_last100. Maksimum to 100 (gdy g(u)=K0=100 co cykl).
+
+# ──────────────────────────────────────────────────────────────────
+# WYNIKI BASELINE (do pobicia)
+# ──────────────────────────────────────────────────────────────────
+
+| Strategia                        | avg_val | avg_profit | delivery |
+|----------------------------------|---------|------------|----------|
+| naive --zeta 0.75                | 92.00   | +140.76    | 79%      |
+| phase_prob 0.8,0.8,0.8,0.8,0.0  | 84.00   | +66.24     | 78%      |
+| incentive --expected_P 90        | 46.00   | -107.64    | 79%      |
+| threshold --max_phase 3          | 21.00   | -170.43    | 81%      |
+
+CEL: avg_val_last100 > 92
+
+# ──────────────────────────────────────────────────────────────────
+# WSKAZÓWKI TECHNICZNE
+# ──────────────────────────────────────────────────────────────────
+
+- Steady-state: przy nU=250 w równowadze jest ok. 120-140 urządzeń w UP na raz
+  (bo każde COMMIT lub ABSTAIN daje DOWN na 1 cykl)
+- Aby trafić w okno [100, 120] dostawców, trzeba ok. 75-85% UP-urządzeń w COMMIT
+  i uwzględnić, że część z nich dozna awarii (1-φ_i sukcesu)
+- Zysk netto urządzenia w fazie i:
+  E[zysk_i] = (1-φ_i) * p_i - κ - φ_i * ρ_i
+  Faza 1: (0.9)*p - 0.25 - (0.1)*0.5 > 0  →  p > 0.33  ✓ łatwe do spełnienia
+  Faza 4: (0.6)*p - 0.25 - (0.4)*1.5 > 0  →  p > 1.42  ✓ wymaga wysokiej płatności
+- Bufor SUS wyrównuje wahania — przy nSUS=20 stabilizuje dostawy
+- Strategia phase_prob daje największą elastyczność i potencjał
+
+# ──────────────────────────────────────────────────────────────────
+# WYMAGANY FORMAT ODPOWIEDZI
+# ──────────────────────────────────────────────────────────────────
+
+Odpowiedz w następującym formacie:
+
+STRATEGIA: [nazwa]
+UZASADNIENIE: [max 3 zdania dlaczego ta strategia i te parametry]
+KOMENDA:
+python sph_sim.py --strategy [NAZWA] [PARAMETRY] --nU 250 --nSUS 20 --K1 120 --T 1000 --kappa 0.25 --alpha 1
+
+Komenda musi być w jednej linii, gotowa do skopiowania i wklejenia w terminalu.
+
+# ──────────────────────────────────────────────────────────────────
+# DODATKOWE PODSUMOWANIE
+# ──────────────────────────────────────────────────────────────────
+
+Doadatkowo przygotuj krótkie podsumowanie statystyczne i opisowe w jaki sposób framework GSD został uzyty. Jakie modele zostaly zaanagazowane do rozwiązania i w jakich rolach. Jak przebiegał proces (planowanie, execucja, veryfikacja)
