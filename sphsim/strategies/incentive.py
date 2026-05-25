@@ -16,3 +16,12 @@ def strategy_incentive(dev, l, s, phi, kappa, rho, h, p):
     exp_pay = (h(dev.phase) / total_h) * exp_P
     net = (1 - phi[idx]) * exp_pay - kappa - phi[idx] * rho[idx]
     return 'COMMIT' if net > 0 else 'ABSTAIN'
+
+
+STRATEGY_META = {
+    'description': 'COMMIT gdy E[zysk_netto] > 0',
+    'params': [
+        ('expected_P', float, 100.0, 'Oczek. płatność'),
+    ],
+    'baseline_kpi': None,
+}

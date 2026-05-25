@@ -17,3 +17,12 @@ def strategy_adaptive(dev, l, s, phi, kappa, rho, h, p):
     else:
         prob = 0.2
     return 'COMMIT' if random.random() < prob else 'ABSTAIN'
+
+
+STRATEGY_META = {
+    'description': 'COMMIT zależnie od poziomu bufora SUS',
+    'params': [
+        ('s_target', int, 10, 'Próg SUS'),
+    ],
+    'baseline_kpi': None,
+}
