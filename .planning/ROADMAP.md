@@ -13,6 +13,7 @@ Note: v1.0 nie był śledzony w GSD — istnieje jako "Validated" w PROJECT.md (
 ## Phases
 
 **Phase Numbering:**
+
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
@@ -27,87 +28,128 @@ Note: v1.0 nie był śledzony w GSD — istnieje jako "Validated" w PROJECT.md (
 ## Phase Details
 
 ### Phase 1: Refactoring foundation
+
 **Goal**: Monolityczny `sph_sim.py` jest rozbity na pakiet modułów (z czytelnym podziałem odpowiedzialności), a wszystkie dotychczasowe inwokacje CLI z v1.0 nadal działają bez zmian
 **Depends on**: Nothing (first phase)
 **Requirements**: CLI-04
 **Success Criteria** (what must be TRUE):
+
   1. Wszystkie 5 baseline'owych inwokacji z docstringu v1.0 (np. `python sph_sim.py --strategy naive --zeta 0.5`, `--strategy phase_prob --probs ...`) zwracają identyczne wyniki numeryczne dla `--seed 42` jak przed refactorem
   2. Kod jest podzielony na moduły (sugerowane: `sph_sim/strategies/`, `sph_sim/core/`, `sph_sim/cli/`) — każdy moduł ma jedną odpowiedzialność, żaden nie przekracza ~150 linii
   3. Plik `sph_sim.py` w katalogu głównym pozostaje uruchamialny jako entry point (`python sph_sim.py ...`)
   4. Output `--json` zawiera dokładnie te same klucze i wartości co w v1.0 dla baseline benchmarku `naive --zeta 0.75`
-**Plans**: TBD
+
+**Plans**: 5 plans
+Plans:
+**Wave 1**
+
+- [ ] 01-01-PLAN.md — Generate baseline JSON fixtures from v1.0 monolith + regression_check.py harness (PRE-refactor; D-11 ordering)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 01-02-PLAN.md — Package skeleton (sphsim/, sphsim/core/) + sphsim/config.py + sphsim/core/model.py + sphsim/core/device.py
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 01-03-PLAN.md — Extract 5 strategies into per-file modules + STRATEGIES registry (sphsim/strategies/)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 01-04-PLAN.md — Extract SPHSimulator + cli/ layer; cutover sph_sim.py to thin shim; finalize sphsim/__init__.py public API
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 01-05-PLAN.md — verify_phase1.sh phase exit gate (4 ROADMAP Success Criteria + D-06 + D-07 + D-16)
 
 ### Phase 2: Interactive CLI shell
+
 **Goal**: Użytkownik może uruchomić tryb interaktywny i wewnątrz REPL'a przeglądać dostępne strategie z ich opisami, parametrami i baseline KPI
 **Depends on**: Phase 1
 **Requirements**: CLI-01, CLI-02, CLI-03, STRAT-01, STRAT-02
 **Success Criteria** (what must be TRUE):
+
   1. Komenda `python sph_sim.py --interactive` uruchamia REPL z polskim promptem i wita użytkownika instrukcją wpisania `/help`
   2. W REPL'u `/help` wyświetla listę wszystkich dostępnych komend (`/help`, `/exit`, `/strategies`, `/strategy <nazwa>`) z krótkim opisem po polsku
   3. `/strategies` wyświetla tabelę 5 wbudowanych strategii (nazwa + jednolinijkowy opis)
   4. `/strategy naive` (i analogicznie dla 4 pozostałych) wyświetla pełen opis: parametry, sygnatura, baseline KPI (np. `naive --zeta 0.75 → avg_val=92`)
   5. `/exit` lub `Ctrl+D` kończy sesję z czystym komunikatem pożegnalnym
+
 **Plans**: TBD
 
 ### Phase 3: Custom strategy loader
+
 **Goal**: Użytkownik może napisać własną strategię w pliku `.py`, załadować ją do symulatora i uruchomić jak każdą wbudowaną
 **Depends on**: Phase 2
 **Requirements**: STRAT-03, STRAT-04, STRAT-05
 **Success Criteria** (what must be TRUE):
+
   1. Komenda `--custom <ścieżka>` (CLI) oraz `/custom <ścieżka>` (REPL) ładują plik `.py` przez `importlib` i rejestrują strategię z nazwą wziętą z pliku
   2. Loader sprawdza obecność funkcji o wymaganej sygnaturze i przy każdym błędzie (brak funkcji, zła sygnatura, exception przy imporcie) wyświetla czytelny polski komunikat z konkretem (nazwa brakującej funkcji, oczekiwane argumenty)
   3. Plik `examples/custom_strategy_template.py` istnieje, zawiera komentarze po polsku, kompiluje się bez ostrzeżeń, ładuje się przez loader i daje sensowne wyniki na baseline'owym środowisku
   4. Załadowana custom strategia jest widoczna w `/strategies` jako dodatkowy wiersz oznaczony jako "custom"
   5. Loader przy ładowaniu jasno komunikuje że wykonuje arbitralny Python z pliku użytkownika (świadome ostrzeżenie bezpieczeństwa)
+
 **Plans**: TBD
 
 ### Phase 4: Rational Agent veto layer
+
 **Goal**: Wrapper `RationalAgent` weto'uje rekomendacje COMMIT o ujemnym oczekiwanym zysku — dydaktycznie dowodząc warunek motywacyjnej zgodności (incentive compatibility)
 **Depends on**: Phase 3
 **Requirements**: AGENT-01, AGENT-02, AGENT-03, AGENT-04, AGENT-05
 **Success Criteria** (what must be TRUE):
+
   1. Każda strategia (wbudowana i custom) jest domyślnie opakowana w `RationalAgent`, który dla każdej rekomendacji COMMIT oblicza `E[zysk_i] = (1-φ_i)·p_i - κ - φ_i·ρ_i` i przy `E[zysk_i] < 0` override'uje na ABSTAIN
   2. Flaga `--no-agent` (CLI) oraz tryb bez agenta w `/compare` wyłącza wrapper i pokazuje surową strategię
   3. Wynik symulacji zawiera licznik veto'wanych decyzji per faza (`veto_per_phase: {1: N1, 2: N2, ...}`) widoczny w outputcie human-readable i JSON
   4. Komenda `/compare <strategia>` lub `--compare-agent` uruchamia tę samą strategię raz z `RationalAgent` i raz bez, a w raporcie pojawia się tabela delta KPI (`avg_val`, `avg_profit`, `delivery_ratio`) między obiema wersjami
   5. Dla scenariusza demonstracyjnego (np. `incentive --expected_P 30` gdzie strategia rekomenduje COMMIT przy ujemnym zysku) `with-agent` ma wyższy `avg_net_profit` niż `without-agent` — empiryczny dowód że weto chroni KPI
+
 **Plans**: TBD
 
 ### Phase 5: Configurable environment
+
 **Goal**: Użytkownik może override'ować profile `φ/ρ` z linii poleceń, wybrać preset funkcji waluacji oraz zobaczyć pełną konfigurację w nagłówku raportu
 **Depends on**: Phase 4
 **Requirements**: ENV-01, ENV-02, ENV-03
 **Success Criteria** (what must be TRUE):
+
   1. Flagi `--phi p1,p2,p3,p4,p5` i `--rho r1,r2,r3,r4,r5` przyjmują listy 5 liczb i nadpisują `DEFAULT_PHI`/`DEFAULT_RHO`; symulator waliduje długość i zakres ([0,1] dla φ, ≥0 dla ρ)
   2. Flaga `--valuation <window|step|linear>` wybiera preset funkcji waluacji `g(u)`; alternatywnie `--K0 X --K1 Y` daje pełną kontrolę parametryczną (window jest domyślem zgodnym z v1.0)
   3. Wszystkie 3 presety waluacji dają deterministyczne, dające się odróżnić wyniki KPI na tym samym seedzie + strategii
   4. Nagłówek wygenerowanego raportu MD zawiera kompletną konfigurację środowiska: `nU, T, κ, α, K0, K1, φ, ρ, seed` w czytelnej tabeli
+
 **Plans**: TBD
 
 ### Phase 6: Report + plots generator
+
 **Goal**: Każde uruchomienie symulacji (single-run) automatycznie produkuje raport MD z linkowanymi wykresami PNG — bez żadnych flag, zawsze
 **Depends on**: Phase 5
 **Requirements**: REPORT-01, REPORT-02, REPORT-03, PLOT-01, PLOT-02, PLOT-03
 **Success Criteria** (what must be TRUE):
+
   1. Każde uruchomienie symulacji tworzy katalog `./reports/<timestamp>/` z plikami `report.md`, `decision_distribution.png`, `kpi_timeseries.png`
   2. `report.md` zawiera sekcje: konfiguracja środowiska, użyta strategia + parametry, tabelę KPI (`avg_val_last100`, `cum_val_total`, `avg_net_profit`, `delivery_ratio`, `avg_providers_l100`), rozkład decyzji per faza, porównanie z baseline `naive --zeta 0.75`
   3. `decision_distribution.png` to wykres słupkowy COMMIT/ABSTAIN/VETO per faza (1-5); `kpi_timeseries.png` to wykres `avg_val` i `avg_providers` w funkcji cyklu z zaznaczonym oknem ostatnich 100 cykli
   4. Oba wykresy są linkowane z `report.md` jako relatywne ścieżki (`![Rozkład](decision_distribution.png)`) i wyświetlają się poprawnie w GitHub/VSCode/Obsidian
   5. W trybie `--compare-agent` raport dodatkowo zawiera tabelę delta KPI (with-agent vs without-agent)
   6. Stary `--json` output nadal działa (kompatybilność z v1.0); raport MD nie jest zamiennikiem tylko dodatkiem
+
 **Plans**: TBD
 **UI hint**: yes
 
 ### Phase 7: Batch runner + aggregation
+
 **Goal**: Użytkownik może uruchomić tę samą strategię dla wielu seedów i otrzymać raport z agregacją statystyczną (mean/std/CI) oraz box-plotami KPI
 **Depends on**: Phase 6
 **Requirements**: BATCH-01, BATCH-02, BATCH-03, PLOT-04
 **Success Criteria** (what must be TRUE):
+
   1. Komenda `/batch <strategia> --seeds 10` (REPL) lub `--batch --seeds 10` (CLI) uruchamia strategię na 10 kolejnych seedach (1..10); `--seeds 1,5,42,100` przyjmuje również jawną listę
   2. Raport MD w trybie batch zawiera tabelę per-seed (jeden wiersz na seed: seed + 5 KPI) oraz sekcję agregatu statystycznego (mean, std, min, max, 95% CI) dla każdego KPI
   3. Plik `batch_aggregate.png` z box-plotami 5 KPI jest generowany i linkowany w raporcie
   4. Batch działa z `RationalAgent` (default) i `--no-agent` (dla porównań statystycznych)
   5. Batch report jasno wskazuje czy strategia bije baseline `naive --zeta 0.75` (czy 95% CI dla `avg_val_last100` jest powyżej 92)
+
 **Plans**: TBD
 **UI hint**: yes
 
@@ -118,7 +160,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Refactoring foundation | 0/TBD | Not started | - |
+| 1. Refactoring foundation | 0/5   | Not started | - |
 | 2. Interactive CLI shell | 0/TBD | Not started | - |
 | 3. Custom strategy loader | 0/TBD | Not started | - |
 | 4. Rational Agent veto layer | 0/TBD | Not started | - |
