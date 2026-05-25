@@ -8,6 +8,10 @@ from sphsim.config import DEFAULT_K0, DEFAULT_F, DEFAULT_PHI, DEFAULT_RHO
 
 def main():
     args = parse_args()
+    if args.interactive:
+        from sphsim.cli.repl import run_repl
+        run_repl()
+        return
     K1 = float('inf') if args.K1 < 0 else args.K1
     params = {
         'zeta': args.zeta, 'max_phase': args.max_phase,
