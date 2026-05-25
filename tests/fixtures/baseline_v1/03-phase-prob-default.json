@@ -1,0 +1,68 @@
+{
+  "env": {
+    "K1": 120,
+    "T": 1000,
+    "alpha": 1,
+    "kappa": 0.25,
+    "nSUS": 20,
+    "nU": 250
+  },
+  "metrics": {
+    "avg_net_profit": 189.0666,
+    "avg_providers_l100": 104.93,
+    "avg_val_last100": 93.0,
+    "cum_val_total": 92100.0,
+    "delivery_ratio": 0.8329,
+    "ic_per_phase": {
+      "1": {
+        "avg_cost_per_commit": 0.2995,
+        "avg_earning_per_commit": 0.4931,
+        "avg_net_per_commit": 0.1935,
+        "commits": 65011,
+        "deliveries": 58570,
+        "delivery_rate": 0.9009,
+        "failures": 6441,
+        "ic_satisfied": true
+      },
+      "2": {
+        "avg_cost_per_commit": 0.3503,
+        "avg_earning_per_commit": 0.8732,
+        "avg_net_per_commit": 0.5229,
+        "commits": 40939,
+        "deliveries": 32727,
+        "delivery_rate": 0.7994,
+        "failures": 8212,
+        "ic_satisfied": true
+      },
+      "3": {
+        "avg_cost_per_commit": 0.4571,
+        "avg_earning_per_commit": 1.1426,
+        "avg_net_per_commit": 0.6855,
+        "commits": 16339,
+        "deliveries": 11506,
+        "delivery_rate": 0.7042,
+        "failures": 4833,
+        "ic_satisfied": true
+      },
+      "4": {
+        "avg_cost_per_commit": 0.8353,
+        "avg_earning_per_commit": 1.3239,
+        "avg_net_per_commit": 0.4887,
+        "commits": 4252,
+        "deliveries": 2593,
+        "delivery_rate": 0.6098,
+        "failures": 1659,
+        "ic_satisfied": true
+      }
+    },
+    "sus_final": 10
+  },
+  "strategy": "phase_prob",
+  "strategy_params": {
+    "expected_P": 100.0,
+    "max_phase": 3,
+    "probs": "0.9,0.7,0.5,0.3,0.0",
+    "s_target": 10,
+    "zeta": 0.5
+  }
+}
