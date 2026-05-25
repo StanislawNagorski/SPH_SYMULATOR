@@ -1,0 +1,8 @@
+01-naive-zeta-0.5.json | python sph_sim.py --strategy naive --zeta 0.5 --seed 42 --json
+02-threshold-max-phase-3.json | python sph_sim.py --strategy threshold --max_phase 3 --seed 42 --json
+03-phase-prob-default.json | python sph_sim.py --strategy phase_prob --probs 0.9,0.7,0.5,0.3,0.0 --seed 42 --json
+04-incentive-expected-P-100.json | python sph_sim.py --strategy incentive --expected_P 100 --seed 42 --json
+05-adaptive-s-target-10.json | python sph_sim.py --strategy adaptive --s_target 10 --seed 42 --json
+06-naive-zeta-0.4-custom-env.json | python sph_sim.py --strategy naive --zeta 0.4 --nU 200 --nSUS 20 --K1 120 --T 1000 --seed 42 --json
+07-phase-prob-custom-kappa-alpha.json | python sph_sim.py --strategy phase_prob --probs 1.0,0.8,0.6,0.2,0.0 --kappa 0.5 --alpha 0 --seed 42 --json
+08-naive-zeta-0.75-baseline.json | python sph_sim.py --strategy naive --zeta 0.75 --seed 42 --json
