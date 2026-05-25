@@ -18,7 +18,7 @@ Note: v1.0 nie był śledzony w GSD — istnieje jako "Validated" w PROJECT.md (
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Refactoring foundation** - Split `sph_sim.py` into package (`strategies/`, `agent/`, `report/`, `cli/`) preserving v1.0 CLI behavior (completed 2026-05-25)
-- [ ] **Phase 2: Interactive CLI shell** - REPL z `/help`, `/exit`, `/strategies`, `/strategy <nazwa>`
+- [x] **Phase 2: Interactive CLI shell** - REPL z `/help`, `/exit`, `/strategies`, `/strategy <nazwa>` (completed 2026-05-25)
 - [ ] **Phase 3: Custom strategy loader** - `importlib`-based loader plików `.py` + walidacja + szablon przykładowy
 - [ ] **Phase 4: Rational Agent veto layer** - Wrapper weto'ujący COMMIT przy `E[zysk] < 0` + tryb porównawczy
 - [ ] **Phase 5: Configurable environment** - Override `φ/ρ`, presety waluacji, serializacja konfiguracji do raportu
@@ -83,8 +83,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 02-03-PLAN.md — Implement SPHShell REPL (sphsim/cli/repl.py) + wire --interactive in sphsim/cli/main.py (D-17..D-22, D-29..D-33)
-- [ ] 02-04-PLAN.md — STRATEGY_META ↔ argparse invariant test (tests/test_strategy_meta_consistency.py per D-25 Claude's Discretion)
+- [x] 02-03-PLAN.md — Implement SPHShell REPL (sphsim/cli/repl.py) + wire --interactive in sphsim/cli/main.py (D-17..D-22, D-29..D-33)
+- [x] 02-04-PLAN.md — STRATEGY_META ↔ argparse invariant test (tests/test_strategy_meta_consistency.py per D-25 Claude's Discretion)
 
 ### Phase 3: Custom strategy loader
 
@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Refactoring foundation | 5/5 | Complete   | 2026-05-25 |
-| 2. Interactive CLI shell | 2/4 | In Progress|  |
+| 2. Interactive CLI shell | 4/4 | Complete   | 2026-05-25 |
 | 3. Custom strategy loader | 0/TBD | Not started | - |
 | 4. Rational Agent veto layer | 0/TBD | Not started | - |
 | 5. Configurable environment | 0/TBD | Not started | - |
