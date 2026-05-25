@@ -1,2 +1,4 @@
-# Package marker dla sphsim/core/.
-# Plan 04 doda re-exporty SPHSimulator i Device po stworzeniu simulator.py.
+# Package marker dla sphsim/core/ — re-eksporty publicznego API rdzenia.
+from sphsim.core.simulator import SPHSimulator
+from sphsim.core.device import Device
+from sphsim.core.model import valuation, sph_stp

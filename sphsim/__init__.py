@@ -1,3 +1,6 @@
-"""Pakiet SPH Symulator — refactor v1.0 monolitu sph_sim.py."""
-# Plan 04 doda re-exporty publicznego API (SPHSimulator, Device, STRATEGIES)
-# zgodnie z D-16 po stworzeniu sphsim/core/simulator.py i sphsim/strategies/.
+"""SPH Mediation Simulator — pakiet refactoringu monolitu sph_sim.py v1.0."""
+from sphsim.core.simulator import SPHSimulator
+from sphsim.core.device import Device
+from sphsim.strategies import STRATEGIES
+
+__all__ = ['SPHSimulator', 'Device', 'STRATEGIES']
