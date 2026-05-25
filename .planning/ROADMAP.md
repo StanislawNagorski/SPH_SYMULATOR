@@ -78,8 +78,8 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Add STRATEGY_META to all 5 strategy files (D-24/D-25/D-26)
-- [ ] 02-02-PLAN.md — Add --interactive in mutex group + docstring fix in sphsim/cli/args.py (D-23/D-27/D-28)
+- [x] 02-01-PLAN.md — Add STRATEGY_META to all 5 strategy files (D-24/D-25/D-26)
+- [x] 02-02-PLAN.md — Add --interactive in mutex group + docstring fix in sphsim/cli/args.py (D-23/D-27/D-28)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -171,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Refactoring foundation | 5/5 | Complete   | 2026-05-25 |
-| 2. Interactive CLI shell | 0/4 | Planned | - |
+| 2. Interactive CLI shell | 2/4 | In Progress|  |
 | 3. Custom strategy loader | 0/TBD | Not started | - |
 | 4. Rational Agent veto layer | 0/TBD | Not started | - |
 | 5. Configurable environment | 0/TBD | Not started | - |
