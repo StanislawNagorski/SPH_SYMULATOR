@@ -1,7 +1,7 @@
 """
 =============================================================
   MEDIACJA TRANSFERU PŁATNYCH USŁUG — Symulator Strategii
-  Autor: Mikołaj Rutkowski
+  Autorzy: Stanisław Nagórski, Mikołaj Rutkowski
   Na podstawie: J. Konorski, MPE cz. 2, Katedra Teleinformatyki WETI
 =============================================================
 
@@ -35,8 +35,11 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )
-    p.add_argument('--strategy', required=True, choices=list(STRATEGIES.keys()),
-                   help='Strategia: ' + ', '.join(STRATEGIES.keys()))
+    mutex = p.add_mutually_exclusive_group(required=True)
+    mutex.add_argument('--interactive', action='store_true',
+                       help='Uruchom tryb interaktywny (REPL)')
+    mutex.add_argument('--strategy', choices=list(STRATEGIES.keys()),
+                       help='Strategia: ' + ', '.join(STRATEGIES.keys()))
     # Parametry strategii
     p.add_argument('--zeta',       type=float, default=0.5,   help='[naive] Frakcja COMMIT (0..1)')
     p.add_argument('--max_phase',  type=int,   default=3,     help='[threshold] Max faza COMMIT')
