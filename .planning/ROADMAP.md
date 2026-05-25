@@ -17,7 +17,7 @@ Note: v1.0 nie był śledzony w GSD — istnieje jako "Validated" w PROJECT.md (
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Refactoring foundation** - Split `sph_sim.py` into package (`strategies/`, `agent/`, `report/`, `cli/`) preserving v1.0 CLI behavior
+- [x] **Phase 1: Refactoring foundation** - Split `sph_sim.py` into package (`strategies/`, `agent/`, `report/`, `cli/`) preserving v1.0 CLI behavior (completed 2026-05-25)
 - [ ] **Phase 2: Interactive CLI shell** - REPL z `/help`, `/exit`, `/strategies`, `/strategy <nazwa>`
 - [ ] **Phase 3: Custom strategy loader** - `importlib`-based loader plików `.py` + walidacja + szablon przykładowy
 - [ ] **Phase 4: Rational Agent veto layer** - Wrapper weto'ujący COMMIT przy `E[zysk] < 0` + tryb porównawczy
@@ -43,23 +43,23 @@ Note: v1.0 nie był śledzony w GSD — istnieje jako "Validated" w PROJECT.md (
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Generate baseline JSON fixtures from v1.0 monolith + regression_check.py harness (PRE-refactor; D-11 ordering)
+- [x] 01-01-PLAN.md — Generate baseline JSON fixtures from v1.0 monolith + regression_check.py harness (PRE-refactor; D-11 ordering)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — Package skeleton (sphsim/, sphsim/core/) + sphsim/config.py + sphsim/core/model.py + sphsim/core/device.py
+- [x] 01-02-PLAN.md — Package skeleton (sphsim/, sphsim/core/) + sphsim/config.py + sphsim/core/model.py + sphsim/core/device.py
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 01-03-PLAN.md — Extract 5 strategies into per-file modules + STRATEGIES registry (sphsim/strategies/)
+- [x] 01-03-PLAN.md — Extract 5 strategies into per-file modules + STRATEGIES registry (sphsim/strategies/)
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 01-04-PLAN.md — Extract SPHSimulator + cli/ layer; cutover sph_sim.py to thin shim; finalize sphsim/__init__.py public API
+- [x] 01-04-PLAN.md — Extract SPHSimulator + cli/ layer; cutover sph_sim.py to thin shim; finalize sphsim/__init__.py public API
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 01-05-PLAN.md — verify_phase1.sh phase exit gate (4 ROADMAP Success Criteria + D-06 + D-07 + D-16)
+- [x] 01-05-PLAN.md — verify_phase1.sh phase exit gate (4 ROADMAP Success Criteria + D-06 + D-07 + D-16)
 
 ### Phase 2: Interactive CLI shell
 
@@ -160,7 +160,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Refactoring foundation | 0/5   | Not started | - |
+| 1. Refactoring foundation | 5/5 | Complete   | 2026-05-25 |
 | 2. Interactive CLI shell | 0/TBD | Not started | - |
 | 3. Custom strategy loader | 0/TBD | Not started | - |
 | 4. Rational Agent veto layer | 0/TBD | Not started | - |
