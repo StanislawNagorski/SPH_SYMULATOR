@@ -2,7 +2,7 @@
 
 **Status:** Active
 **Created:** 2026-05-25
-**Total:** 25 requirements across 7 categories
+**Total:** 27 requirements across 7 categories
 
 ---
 
@@ -84,10 +84,53 @@
 
 ## Traceability
 
-<!-- Filled by roadmap — maps REQ-IDs to phases. -->
+<!-- Maps REQ-IDs to phases. Updated by roadmap. -->
 
-(Roadmap pending)
+**Coverage:** 27/27 requirements mapped to 7 phases ✓ (każdy REQ-ID przypisany do dokładnie jednej fazy, brak sierot, brak duplikatów)
+
+| REQ-ID | Phase | Status |
+|--------|-------|--------|
+| CLI-01 | Phase 2 — Interactive CLI shell | Pending |
+| CLI-02 | Phase 2 — Interactive CLI shell | Pending |
+| CLI-03 | Phase 2 — Interactive CLI shell | Pending |
+| CLI-04 | Phase 1 — Refactoring foundation | Pending |
+| STRAT-01 | Phase 2 — Interactive CLI shell | Pending |
+| STRAT-02 | Phase 2 — Interactive CLI shell | Pending |
+| STRAT-03 | Phase 3 — Custom strategy loader | Pending |
+| STRAT-04 | Phase 3 — Custom strategy loader | Pending |
+| STRAT-05 | Phase 3 — Custom strategy loader | Pending |
+| AGENT-01 | Phase 4 — Rational Agent veto layer | Pending |
+| AGENT-02 | Phase 4 — Rational Agent veto layer | Pending |
+| AGENT-03 | Phase 4 — Rational Agent veto layer | Pending |
+| AGENT-04 | Phase 4 — Rational Agent veto layer | Pending |
+| AGENT-05 | Phase 4 — Rational Agent veto layer | Pending |
+| ENV-01 | Phase 5 — Configurable environment | Pending |
+| ENV-02 | Phase 5 — Configurable environment | Pending |
+| ENV-03 | Phase 5 — Configurable environment | Pending |
+| BATCH-01 | Phase 7 — Batch runner + aggregation | Pending |
+| BATCH-02 | Phase 7 — Batch runner + aggregation | Pending |
+| BATCH-03 | Phase 7 — Batch runner + aggregation | Pending |
+| REPORT-01 | Phase 6 — Report + plots generator | Pending |
+| REPORT-02 | Phase 6 — Report + plots generator | Pending |
+| REPORT-03 | Phase 6 — Report + plots generator | Pending |
+| PLOT-01 | Phase 6 — Report + plots generator | Pending |
+| PLOT-02 | Phase 6 — Report + plots generator | Pending |
+| PLOT-03 | Phase 6 — Report + plots generator | Pending |
+| PLOT-04 | Phase 7 — Batch runner + aggregation | Pending |
+
+**Distribution per phase:**
+
+| Phase | Requirements | Count |
+|-------|--------------|-------|
+| Phase 1 — Refactoring foundation | CLI-04 | 1 |
+| Phase 2 — Interactive CLI shell | CLI-01, CLI-02, CLI-03, STRAT-01, STRAT-02 | 5 |
+| Phase 3 — Custom strategy loader | STRAT-03, STRAT-04, STRAT-05 | 3 |
+| Phase 4 — Rational Agent veto layer | AGENT-01, AGENT-02, AGENT-03, AGENT-04, AGENT-05 | 5 |
+| Phase 5 — Configurable environment | ENV-01, ENV-02, ENV-03 | 3 |
+| Phase 6 — Report + plots generator | REPORT-01, REPORT-02, REPORT-03, PLOT-01, PLOT-02, PLOT-03 | 6 |
+| Phase 7 — Batch runner + aggregation | BATCH-01, BATCH-02, BATCH-03, PLOT-04 | 4 |
+| **Total** | | **27** |
 
 ---
 
-*Last updated: 2026-05-25 — initial creation*
+*Last updated: 2026-05-25 — traceability added by roadmapper*
