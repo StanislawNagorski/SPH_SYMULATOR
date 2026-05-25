@@ -2,9 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Agent CLI
-status: ready_to_plan
-last_updated: "2026-05-25T14:30:00.000Z"
-last_activity: 2026-05-25
+status: planning
+stopped_at: Phase 1 context gathered
+last_updated: "2026-05-25T12:56:05.296Z"
+last_activity: 2026-05-25 — ROADMAP.md created, 25 requirements mapped to 7 phases (100% coverage)
 progress:
   total_phases: 7
   completed_phases: 0
@@ -34,6 +35,7 @@ Progress: [░░░░░░░░░░] 0%
 ## Performance Metrics
 
 **Velocity:**
+
 - Total plans completed: 0
 - Average duration: —
 - Total execution time: —
@@ -51,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 | 7. Batch runner | 0/TBD | — | — |
 
 **Recent Trend:**
+
 - Last 5 plans: —
 - Trend: —
 
@@ -76,10 +79,12 @@ None yet.
 ### Blockers/Concerns
 
 **Phase 1 (Refactoring) — kluczowy ryzykowny moment:**
+
 - Backwards compat (CLI-04) musi być zweryfikowany numerycznie — sugerowany regression test porównujący output `--json` przed/po refactorze dla seed=42 i każdej z 5 strategii
 - Decyzja o nazewnictwie pakietu (`sph_sim/` vs `sphsim/` vs zachowanie pojedynczego pliku z modułami pomocniczymi) — do podjęcia w plan-phase 1
 
 **Phase 4 (Rational Agent) — wymaga ostrożności:**
+
 - Obliczenie `E[zysk_i]` wymaga znajomości oczekiwanej płatności `p_i`, która zależy od stanu globalnego (liczba dostawców `l`) — analogicznie do logiki w `strategy_incentive`; trzeba zdecydować czy agent dostaje to samo wejście co strategia, czy ma własny model predykcji `p_i`
 
 ## Deferred Items
@@ -92,6 +97,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-25
-Stopped at: ROADMAP.md created, ready for `/gsd:plan-phase 1`
-Resume file: None
+Last session: 2026-05-25T12:56:05.291Z
+Stopped at: Phase 1 context gathered
+Resume file: .planning/phases/01-refactoring-foundation/01-CONTEXT.md
