@@ -117,17 +117,33 @@ class SPHShell(cmd.Cmd):
         print(f"Nieznana komenda: '{text}'. Wpisz 'help' żeby zobaczyć dostępne komendy.")
 
 
+def _write_history_silent():
+    """Helper dla atexit — zapis historii, cicho ignoruj błędy I/O.
+
+    Sandboxowane / read-only środowiska (CI, containers) mogą blokować
+    zapis do ~/.sphsim_history — to nie powinno zatruwać zwykłego wyjścia
+    z REPL'a.
+    """
+    try:
+        readline.write_history_file(HISTORY_FILE)
+    except OSError:
+        pass
+
+
 def run_repl():
     """Top-level entry-point REPL'a.
 
-    Ładuje historię readline (cicho ignoruje FileNotFoundError — D-19),
+    Ładuje historię readline (cicho ignoruje FileNotFoundError i pokrewne
+    OSError — D-19; Rule 2 robustness dla sandboxed środowisk),
     rejestruje atexit handler do zapisu historii, uruchamia cmdloop().
     """
     try:
         readline.read_history_file(HISTORY_FILE)
     except FileNotFoundError:
         pass  # D-19: silent na pierwsze uruchomienie
+    except OSError:
+        pass  # Rule 2: sandbox/permission errors — REPL działa bez historii
 
-    atexit.register(lambda: readline.write_history_file(HISTORY_FILE))
+    atexit.register(_write_history_silent)
 
     SPHShell().cmdloop()
