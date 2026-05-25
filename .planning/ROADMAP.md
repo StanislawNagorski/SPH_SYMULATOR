@@ -68,13 +68,23 @@ Plans:
 **Requirements**: CLI-01, CLI-02, CLI-03, STRAT-01, STRAT-02
 **Success Criteria** (what must be TRUE):
 
-  1. Komenda `python sph_sim.py --interactive` uruchamia REPL z polskim promptem i wita użytkownika instrukcją wpisania `/help`
-  2. W REPL'u `/help` wyświetla listę wszystkich dostępnych komend (`/help`, `/exit`, `/strategies`, `/strategy <nazwa>`) z krótkim opisem po polsku
-  3. `/strategies` wyświetla tabelę 5 wbudowanych strategii (nazwa + jednolinijkowy opis)
-  4. `/strategy naive` (i analogicznie dla 4 pozostałych) wyświetla pełen opis: parametry, sygnatura, baseline KPI (np. `naive --zeta 0.75 → avg_val=92`)
-  5. `/exit` lub `Ctrl+D` kończy sesję z czystym komunikatem pożegnalnym
+  1. Komenda `python sph_sim.py --interactive` uruchamia REPL z polskim promptem i wita użytkownika instrukcją wpisania `help` (D-17 override: komendy bez prefiksu `/`)
+  2. W REPL'u `help` wyświetla listę wszystkich dostępnych komend (`help`, `exit`, `strategies`, `strategy <nazwa>`) z krótkim opisem po polsku (D-17 override)
+  3. `strategies` wyświetla tabelę 5 wbudowanych strategii (nazwa + jednolinijkowy opis) (D-17 override)
+  4. `strategy naive` (i analogicznie dla 4 pozostałych) wyświetla pełen opis: parametry, sygnatura, baseline KPI (np. `naive --zeta 0.75 → avg_val_last100 = 92.0`) (D-17 override)
+  5. `exit` lub `Ctrl+D` kończy sesję z czystym komunikatem pożegnalnym (D-17 override + D-20)
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Add STRATEGY_META to all 5 strategy files (D-24/D-25/D-26)
+- [ ] 02-02-PLAN.md — Add --interactive in mutex group + docstring fix in sphsim/cli/args.py (D-23/D-27/D-28)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-03-PLAN.md — Implement SPHShell REPL (sphsim/cli/repl.py) + wire --interactive in sphsim/cli/main.py (D-17..D-22, D-29..D-33)
+- [ ] 02-04-PLAN.md — STRATEGY_META ↔ argparse invariant test (tests/test_strategy_meta_consistency.py per D-25 Claude's Discretion)
 
 ### Phase 3: Custom strategy loader
 
@@ -161,7 +171,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Refactoring foundation | 5/5 | Complete   | 2026-05-25 |
-| 2. Interactive CLI shell | 0/TBD | Not started | - |
+| 2. Interactive CLI shell | 0/4 | Planned | - |
 | 3. Custom strategy loader | 0/TBD | Not started | - |
 | 4. Rational Agent veto layer | 0/TBD | Not started | - |
 | 5. Configurable environment | 0/TBD | Not started | - |
