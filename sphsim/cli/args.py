@@ -26,7 +26,47 @@ DOSTĘPNE STRATEGIE:
 """
 import argparse
 from sphsim.strategies import STRATEGIES, BUILTIN_STRATEGIES
-from sphsim.config import DEFAULT_NU, DEFAULT_NSUS, DEFAULT_K1, DEFAULT_T, DEFAULT_KAPPA, DEFAULT_ALPHA
+from sphsim.config import DEFAULT_NU, DEFAULT_NSUS, DEFAULT_K1, DEFAULT_T, DEFAULT_KAPPA, DEFAULT_ALPHA, DEFAULT_PHI, DEFAULT_RHO
+
+
+def _parse_phi_list(s: str) -> list:
+    """Konwertuje string 'p1,p2,p3,p4,p5' na listę 5 floatów ∈ [0,1] (ENV-01, D-17)."""
+    try:
+        vals = [float(x.strip()) for x in s.split(',')]
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"Nieprawidłowy format --phi: '{s}'. Oczekiwano 5 liczb po przecinku, np. 0.1,0.2,0.3,0.4,1.0"
+        )
+    if len(vals) != 5:
+        raise argparse.ArgumentTypeError(
+            f"--phi wymaga dokładnie 5 wartości (podano {len(vals)}): '{s}'"
+        )
+    for i, v in enumerate(vals):
+        if not (0.0 <= v <= 1.0):
+            raise argparse.ArgumentTypeError(
+                f"--phi[{i+1}]={v} poza zakresem [0, 1]. Wszystkie wartości φ muszą być w [0, 1]."
+            )
+    return vals
+
+
+def _parse_rho_list(s: str) -> list:
+    """Konwertuje string 'r1,r2,r3,r4,r5' na listę 5 floatów ≥ 0 (ENV-01, D-17)."""
+    try:
+        vals = [float(x.strip()) for x in s.split(',')]
+    except ValueError:
+        raise argparse.ArgumentTypeError(
+            f"Nieprawidłowy format --rho: '{s}'. Oczekiwano 5 liczb po przecinku, np. 0.5,0.5,0.7,1.5,3.0"
+        )
+    if len(vals) != 5:
+        raise argparse.ArgumentTypeError(
+            f"--rho wymaga dokładnie 5 wartości (podano {len(vals)}): '{s}'"
+        )
+    for i, v in enumerate(vals):
+        if v < 0.0:
+            raise argparse.ArgumentTypeError(
+                f"--rho[{i+1}]={v} jest ujemne. Wszystkie wartości ρ muszą być ≥ 0."
+            )
+    return vals
 
 
 def parse_args():
@@ -57,6 +97,12 @@ def parse_args():
     p.add_argument('--nU',   type=int,   default=DEFAULT_NU,    help=f'Liczba urządzeń (def {DEFAULT_NU})')
     p.add_argument('--nSUS', type=int,   default=DEFAULT_NSUS,  help=f'Pojemność SUS (def {DEFAULT_NSUS})')
     p.add_argument('--K1',   type=float, default=DEFAULT_K1,    help=f'Górna granica waluacji (def {DEFAULT_K1})')
+    p.add_argument('--phi',  type=_parse_phi_list, default=DEFAULT_PHI,
+                   metavar='p1,..,p5',
+                   help='Profile awarii φ (5 liczb w [0,1], def: 0.1,0.2,0.3,0.4,1.0)')
+    p.add_argument('--rho',  type=_parse_rho_list, default=DEFAULT_RHO,
+                   metavar='r1,..,r5',
+                   help='Koszty naprawy ρ (5 liczb ≥ 0, def: 0.5,0.5,0.7,1.5,3.0)')
     p.add_argument('--T',    type=int,   default=DEFAULT_T,     help=f'Liczba cykli (def {DEFAULT_T})')
     p.add_argument('--kappa',type=float, default=DEFAULT_KAPPA, help=f'Koszt dostarczenia (def {DEFAULT_KAPPA})')
     p.add_argument('--alpha',type=float, default=DEFAULT_ALPHA, help=f'Wykładnik h(i)=i^alpha (def {DEFAULT_ALPHA})')
