@@ -120,8 +120,52 @@ class TestPhiRhoFlow(unittest.TestCase):
 class TestValuationDispatch(unittest.TestCase):
     """Tests dispatchu --valuation {window,step,linear} (ENV-02 unit). Plan 02, Wave 2."""
 
-    def test_placeholder(self):
-        self.skipTest("Wave 2 implementation — class name locked by Plan 00")
+    def test_window_default_K0_K1(self):
+        """Preset window (domyślny): u=110 w oknie [100,120] → zwraca K0=100.0."""
+        from sphsim.core.model import valuation
+        self.assertEqual(valuation(110, 100, 120), 100.0)
+
+    def test_window_outside_range(self):
+        """Preset window: u<K0 i u>K1 → zwraca 0.0 (poza oknem)."""
+        from sphsim.core.model import valuation
+        self.assertEqual(valuation(80, 100, 120), 0.0)
+        self.assertEqual(valuation(130, 100, 120), 0.0)
+
+    def test_step_above_threshold(self):
+        """Preset step: u=130 >= K0=100 → zwraca K0=100.0 (bez kary za nadpodaż)."""
+        from sphsim.core.model import valuation
+        self.assertEqual(valuation(130, 100, 120, 'step'), 100.0)
+
+    def test_step_below_threshold(self):
+        """Preset step: u=80 < K0=100 → zwraca 0.0."""
+        from sphsim.core.model import valuation
+        self.assertEqual(valuation(80, 100, 120, 'step'), 0.0)
+
+    def test_linear_ramp(self):
+        """Preset linear: u=60, K0=100, K1=120 → K0*min(u,K1)/K1 = 100*60/120 = 50.0."""
+        from sphsim.core.model import valuation
+        self.assertAlmostEqual(valuation(60, 100, 120, 'linear'), 50.0, places=4)
+
+    def test_linear_inf_K1_fallback(self):
+        """Preset linear: K1=inf → fallback do step semantics → K0 gdy u>=K0."""
+        from sphsim.core.model import valuation
+        self.assertEqual(valuation(150, 100, float('inf'), 'linear'), 100.0)
+
+    def test_sph_stp_threads_preset(self):
+        """sph_stp musi przekazać preset do P_of_x: wyniki dla step vs window różnią się (Pitfall 1)."""
+        from sphsim.core.model import sph_stp, valuation
+        r_step = sph_stp(150, 0, 20, 100, 120, 'step')
+        r_window = sph_stp(150, 0, 20, 100, 120, 'window')
+        # Jeśli (z*,y*) są identyczne, sprawdzamy czy P_of_x(x) różni się dla obu presetów
+        z_step, y_step = r_step
+        z_window, y_window = r_window
+        x_step = z_step - y_step
+        x_window = z_window - y_window
+        p_step = valuation(150 - x_step, 100, 120, 'step') + x_step
+        p_window = valuation(150 - x_window, 100, 120, 'window') + x_window
+        # Preset step (brak górnego ograniczenia) musi dać inny wynik P niż window
+        self.assertNotEqual(p_step, p_window,
+                            msg='Preset step i window dają ten sam P_of_x — preset nie dociera do P_of_x (Pitfall 1)')
 
 
 class TestValuationPresets(unittest.TestCase):
