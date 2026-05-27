@@ -140,8 +140,8 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 04-04-PLAN.md — CLI: args.py (--no-agent + --compare-agent + mutex) + main.py wrap + run_compare
-- [ ] 04-05-PLAN.md — REPL: do_compare command + do_run wrap (agent default-on) + do_help update
+- [x] 04-04-PLAN.md — CLI: args.py (--no-agent + --compare-agent + mutex) + main.py wrap + run_compare
+- [x] 04-05-PLAN.md — REPL: do_compare command + do_run wrap (agent default-on) + do_help update
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -208,7 +208,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Refactoring foundation | 5/5 | Complete   | 2026-05-25 |
 | 2. Interactive CLI shell | 4/4 | Complete   | 2026-05-25 |
 | 3. Custom strategy loader | 4/4 | Complete   | 2026-05-27 |
-| 4. Rational Agent veto layer | 3/7 | In Progress|  |
+| 4. Rational Agent veto layer | 5/7 | In Progress|  |
 | 5. Configurable environment | 0/TBD | Not started | - |
 | 6. Report + plots generator | 0/TBD | Not started | - |
 | 7. Batch runner + aggregation | 0/TBD | Not started | - |
