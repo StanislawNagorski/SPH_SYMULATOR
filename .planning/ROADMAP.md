@@ -103,7 +103,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Loader module (load_custom + parse_params_from_meta + LoaderError) + BUILTIN_STRATEGIES + tests/test_loader.py (19+ cases covering D-47 4 layers + D-49 collision + D-38 reload)
+- [x] 03-01-PLAN.md — Loader module (load_custom + parse_params_from_meta + LoaderError) + BUILTIN_STRATEGIES + tests/test_loader.py (19+ cases covering D-47 4 layers + D-49 collision + D-38 reload)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -185,7 +185,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Refactoring foundation | 5/5 | Complete   | 2026-05-25 |
 | 2. Interactive CLI shell | 4/4 | Complete   | 2026-05-25 |
-| 3. Custom strategy loader | 0/4 | Not started | - |
+| 3. Custom strategy loader | 1/4 | In progress | - |
 | 4. Rational Agent veto layer | 0/TBD | Not started | - |
 | 5. Configurable environment | 0/TBD | Not started | - |
 | 6. Report + plots generator | 0/TBD | Not started | - |
