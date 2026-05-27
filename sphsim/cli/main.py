@@ -22,11 +22,12 @@ def run_compare(args, raw_strategy_fn, name, params, K1):
     Zwraca:
         {'comparison': {'with_agent': {...}, 'without_agent': {...}, 'delta': {...}, 'agent_helps': bool}}
     """
-    # Phase 5 ENV-01: phi/rho z args (default = DEFAULT_PHI/DEFAULT_RHO via argparse).
+    # Phase 5 ENV-02: K0/valuation_preset z args (default DEFAULT_K0/'window' via argparse).
     common = dict(
-        nU=args.nU, nSUS=args.nSUS, K0=DEFAULT_K0, K1=K1,
+        nU=args.nU, nSUS=args.nSUS, K0=args.K0, K1=K1,
         F=DEFAULT_F, T=args.T, kappa=args.kappa, alpha=args.alpha,
-        phi=args.phi, rho=args.rho, params=params, seed=args.seed,
+        phi=args.phi, rho=args.rho, valuation_preset=args.valuation,
+        params=params, seed=args.seed,
     )
     # Uruchomienie z agentem — ten sam seed (Claude's Discretion: deterministyczne porównanie).
     sim_with = SPHSimulator(strategy_fn=wrap_with_agent(raw_strategy_fn, args.expected_P), **common)
@@ -89,11 +90,11 @@ def main():
             strategy_fn = wrap_with_agent(strategy_fn, args.expected_P)
 
         # (f) Build + run + render.
-        # Phase 5 ENV-01: phi/rho z args (default = DEFAULT_PHI/DEFAULT_RHO via argparse).
+        # Phase 5 ENV-02: K0/valuation_preset z args (default DEFAULT_K0/'window' via argparse).
         sim = SPHSimulator(
-            nU=args.nU, nSUS=args.nSUS, K0=DEFAULT_K0, K1=K1,
+            nU=args.nU, nSUS=args.nSUS, K0=args.K0, K1=K1,
             F=DEFAULT_F, T=args.T, kappa=args.kappa, alpha=args.alpha,
-            phi=args.phi, rho=args.rho,
+            phi=args.phi, rho=args.rho, valuation_preset=args.valuation,
             strategy_fn=strategy_fn, params=params, seed=args.seed,
         )
         res = sim.run()
@@ -126,11 +127,11 @@ def main():
         strategy_fn = wrap_with_agent(strategy_fn, args.expected_P)
 
     # (f) Build + run + render.
-    # Phase 5 ENV-01: phi/rho z args (default = DEFAULT_PHI/DEFAULT_RHO via argparse).
+    # Phase 5 ENV-02: K0/valuation_preset z args (default DEFAULT_K0/'window' via argparse).
     sim = SPHSimulator(
-        nU=args.nU, nSUS=args.nSUS, K0=DEFAULT_K0, K1=K1,
+        nU=args.nU, nSUS=args.nSUS, K0=args.K0, K1=K1,
         F=DEFAULT_F, T=args.T, kappa=args.kappa, alpha=args.alpha,
-        phi=args.phi, rho=args.rho,
+        phi=args.phi, rho=args.rho, valuation_preset=args.valuation,
         strategy_fn=strategy_fn,
         params=params, seed=args.seed,
     )

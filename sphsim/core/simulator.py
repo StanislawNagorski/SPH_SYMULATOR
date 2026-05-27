@@ -5,10 +5,11 @@ from sphsim.core.model import valuation, sph_stp
 
 class SPHSimulator:
     def __init__(self, nU, nSUS, K0, K1, F, T, kappa, alpha,
-                 phi, rho, strategy_fn, params, seed=42):
+                 phi, rho, strategy_fn, params, valuation_preset='window', seed=42):
         self.nU, self.nSUS, self.K0, self.K1 = nU, nSUS, K0, K1
         self.F, self.T, self.kappa, self.alpha = F, T, kappa, alpha
         self.phi, self.rho = phi, rho
+        self.valuation_preset = valuation_preset
         self.strategy_fn, self.params = strategy_fn, params
         random.seed(seed)
 
@@ -77,9 +78,10 @@ class SPHSimulator:
                     dev.down_left = 1
 
             u = len(providers)
-            z, y = sph_stp(u, self.s, self.nSUS, self.K0, self.K1)
+            # Phase 5 ENV-02: K0/valuation_preset z args (default DEFAULT_K0/'window' via argparse).
+            z, y = sph_stp(u, self.s, self.nSUS, self.K0, self.K1, self.valuation_preset)
             svc_to_cons = u - z + y
-            P_total = valuation(svc_to_cons, self.K0, self.K1) + z - y
+            P_total = valuation(svc_to_cons, self.K0, self.K1, self.valuation_preset) + z - y
 
             l_curr = [0] * (self.F - 1)
             if u > 0:
@@ -102,7 +104,7 @@ class SPHSimulator:
             self.s = max(0, self.s + z - y)
             l_prev = l_curr
 
-            val = valuation(svc_to_cons, self.K0, self.K1)
+            val = valuation(svc_to_cons, self.K0, self.K1, self.valuation_preset)
             total_val += val
             avg_profit = sum(d.net_profit for d in self.devices) / self.nU
             deliv_ratio = total_deliv / max(total_dec, 1)
