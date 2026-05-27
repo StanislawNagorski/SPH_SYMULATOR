@@ -19,7 +19,7 @@
 
 - [ ] **STRAT-01**: Użytkownik może wpisać `/strategies` aby zobaczyć listę 5 wbudowanych strategii z krótkim opisem
 - [ ] **STRAT-02**: Użytkownik może wpisać `/strategy <nazwa>` aby zobaczyć szczegóły konkretnej strategii (parametry, sygnatura, baseline KPI)
-- [ ] **STRAT-03**: Użytkownik może załadować custom strategię z pliku `.py` komendą `/custom <ścieżka>` lub flagą `--custom <ścieżka>`
+- [x] **STRAT-03**: Użytkownik może załadować custom strategię z pliku `.py` komendą `/custom <ścieżka>` lub flagą `--custom <ścieżka>`
 - [ ] **STRAT-04**: Loader waliduje że plik zawiera funkcję o wymaganej sygnaturze i jasno komunikuje błędy (brak funkcji, zła sygnatura, exception)
 - [ ] **STRAT-05**: Projekt zawiera przykładowy szablon `examples/custom_strategy_template.py` z komentarzami po polsku
 
@@ -96,7 +96,7 @@
 | CLI-04 | Phase 1 — Refactoring foundation | Pending |
 | STRAT-01 | Phase 2 — Interactive CLI shell | Pending |
 | STRAT-02 | Phase 2 — Interactive CLI shell | Pending |
-| STRAT-03 | Phase 3 — Custom strategy loader | Pending |
+| STRAT-03 | Phase 3 — Custom strategy loader | Complete |
 | STRAT-04 | Phase 3 — Custom strategy loader | Pending |
 | STRAT-05 | Phase 3 — Custom strategy loader | Pending |
 | AGENT-01 | Phase 4 — Rational Agent veto layer | Pending |

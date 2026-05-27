@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Agent CLI
 status: executing
-stopped_at: Phase 3 Plan 01 complete (loader + tests delivered)
-last_updated: "2026-05-27T16:30:00.000Z"
-last_activity: 2026-05-27 -- Phase 03 Plan 01 complete (3 tasks, 21 unit tests, regression 8/8)
+stopped_at: Phase 3 Plan 02 complete — ready for Plan 03 (REPL do_custom + do_run)
+last_updated: "2026-05-27T16:00:29.168Z"
+last_activity: 2026-05-27 -- Phase 03 Plan 02 complete (CLI --custom + --param wired; 2 tasks, regression 8/8, 22 tests)
 progress:
   total_phases: 7
   completed_phases: 2
   total_plans: 13
-  completed_plans: 10
-  percent: 36
+  completed_plans: 11
+  percent: 29
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-25)
 ## Current Position
 
 Phase: 03 (custom-strategy-loader) — EXECUTING
-Plan: 2 of 4 (Plan 01 complete)
+Plan: 3 of 4 (Plan 01 + Plan 02 complete)
 Status: Executing Phase 03
-Last activity: 2026-05-27 -- Phase 03 Plan 01 complete (loader.py + tests/test_loader.py + BUILTIN_STRATEGIES; 3 tasks, 21 unit tests, regression 8/8)
+Last activity: 2026-05-27 -- Phase 03 Plan 02 complete (sphsim/cli/args.py + sphsim/cli/main.py wired with --custom mutex + --param + early branch; 2 tasks, regression 8/8, 22 tests)
 
-Progress: [██░░░░░░░░] 25% (Phase 3: 1/4 plans)
+Progress: [█████████░] 85%
 
 ## Performance Metrics
 
@@ -46,7 +46,7 @@ Progress: [██░░░░░░░░] 25% (Phase 3: 1/4 plans)
 |-------|-------|-------|----------|
 | 1. Refactoring foundation | 0/TBD | — | — |
 | 2. Interactive CLI shell | 0/TBD | — | — |
-| 3. Custom strategy loader | 1/4 | ~10 min | ~10 min |
+| 3. Custom strategy loader | 2/4 | ~20 min | ~10 min |
 | 4. Rational Agent veto | 0/TBD | — | — |
 | 5. Configurable environment | 0/TBD | — | — |
 | 6. Report + plots generator | 0/TBD | — | — |
@@ -58,6 +58,10 @@ Progress: [██░░░░░░░░] 25% (Phase 3: 1/4 plans)
 - Trend: —
 
 *Updated after each plan completion*
+
+**Recent plans:**
+- Phase 3 Plan 02 — ~10 min — 2 tasks — 2 files modified
+- Phase 3 Plan 01 — ~10 min — 3 tasks — 2 files created, 1 modified
 
 ## Accumulated Context
 
@@ -71,6 +75,7 @@ Recent decisions affecting current work:
 - Custom strategy: plik `.py` przez `importlib` (nie YAML/DSL) — pełna elastyczność
 - Rational Agent: wrapper veto + tryb porównawczy — dowód incentive compatibility
 - Wizualizacja: `matplotlib` jako required dep, PNG zawsze (bez flagi `--plot`)
+- [Phase 3]: Plan 03-02 (D-44/D-39/D-50): --custom is 3rd mutex member; --param k=v repeatable outside mutex; --strategy choices frozen to BUILTIN_STRATEGIES at parse time — custom strategies reachable only via --custom in one-shot CLI
 
 ### Pending Todos
 
@@ -97,6 +102,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-27T16:30:00.000Z
-Stopped at: Phase 3 Plan 01 complete — ready for Plan 02 (CLI integration)
-Resume file: .planning/phases/03-custom-strategy-loader/03-02-PLAN.md
+Last session: 2026-05-27T16:00:11.040Z
+Stopped at: Phase 3 Plan 02 complete — ready for Plan 03 (REPL do_custom + do_run)
+Resume file: .planning/phases/03-custom-strategy-loader/03-03-PLAN.md

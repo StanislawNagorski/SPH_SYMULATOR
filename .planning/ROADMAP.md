@@ -107,7 +107,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — CLI integration: --custom in mutex + --param append + main.py args.custom early branch (D-44, D-46, D-50)
+- [x] 03-02-PLAN.md — CLI integration: --custom in mutex + --param append + main.py args.custom early branch (D-44, D-46, D-50)
 - [ ] 03-03-PLAN.md — REPL integration: SPHShell do_custom + do_run + do_strategies [custom] suffix + do_strategy dispatch + do_help 6 komend (D-41, D-42, D-50)
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -185,7 +185,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Refactoring foundation | 5/5 | Complete   | 2026-05-25 |
 | 2. Interactive CLI shell | 4/4 | Complete   | 2026-05-25 |
-| 3. Custom strategy loader | 1/4 | In progress | - |
+| 3. Custom strategy loader | 2/4 | In Progress|  |
 | 4. Rational Agent veto layer | 0/TBD | Not started | - |
 | 5. Configurable environment | 0/TBD | Not started | - |
 | 6. Report + plots generator | 0/TBD | Not started | - |
