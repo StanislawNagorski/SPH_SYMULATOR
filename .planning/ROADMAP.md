@@ -99,7 +99,20 @@ Plans:
   4. Załadowana custom strategia jest widoczna w `/strategies` jako dodatkowy wiersz oznaczony jako "custom"
   5. Loader przy ładowaniu jasno komunikuje że wykonuje arbitralny Python z pliku użytkownika (świadome ostrzeżenie bezpieczeństwa)
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Loader module (load_custom + parse_params_from_meta + LoaderError) + BUILTIN_STRATEGIES + tests/test_loader.py (19+ cases covering D-47 4 layers + D-49 collision + D-38 reload)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — CLI integration: --custom in mutex + --param append + main.py args.custom early branch (D-44, D-46, D-50)
+- [ ] 03-03-PLAN.md — REPL integration: SPHShell do_custom + do_run + do_strategies [custom] suffix + do_strategy dispatch + do_help 6 komend (D-41, D-42, D-50)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 03-04-PLAN.md — examples/custom_strategy_template.py (D-51 STRAT-05) + scripts/verify_phase3.sh phase exit gate (5 ROADMAP SCs + regression + invariant)
 
 ### Phase 4: Rational Agent veto layer
 
@@ -172,7 +185,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Refactoring foundation | 5/5 | Complete   | 2026-05-25 |
 | 2. Interactive CLI shell | 4/4 | Complete   | 2026-05-25 |
-| 3. Custom strategy loader | 0/TBD | Not started | - |
+| 3. Custom strategy loader | 0/4 | Not started | - |
 | 4. Rational Agent veto layer | 0/TBD | Not started | - |
 | 5. Configurable environment | 0/TBD | Not started | - |
 | 6. Report + plots generator | 0/TBD | Not started | - |
