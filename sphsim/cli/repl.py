@@ -54,14 +54,16 @@ class SPHShell(cmd.Cmd):
     intro = INTRO
     prompt = 'sph> '  # D-22 — krótkie, bez ANSI
 
-    # ---- help (override cmd.Cmd auto-help — D-17, CLI-02) ----
+    # ---- help (override cmd.Cmd auto-help — D-17, CLI-02; 6 komend po Phase 3) ----
     def do_help(self, arg):
         """Wyświetl listę dostępnych komend."""
         print("Dostępne komendy:")
-        print("  help               — Wyświetl tę listę komend.")
-        print("  exit               — Zakończ sesję (alternatywnie Ctrl+D).")
-        print("  strategies         — Wyświetl listę wbudowanych strategii.")
-        print("  strategy <nazwa>   — Wyświetl szczegóły strategii (parametry, baseline KPI).")
+        print("  help                            — Wyświetl tę listę komend.")
+        print("  exit                            — Zakończ sesję (alternatywnie Ctrl+D).")
+        print("  strategies                      — Wyświetl listę wbudowanych i custom strategii.")
+        print("  strategy <nazwa>                — Wyświetl szczegóły strategii (parametry, baseline KPI).")
+        print("  custom <ścieżka> [k=v ...]      — Załaduj custom strategię z pliku .py.")
+        print("  run <nazwa> [k=v ...]           — Uruchom symulację (built-in lub custom).")
 
     # ---- exit (D-20, CLI-03) ----
     def do_exit(self, arg):
@@ -76,15 +78,23 @@ class SPHShell(cmd.Cmd):
         print('')
         return self.do_exit(arg)
 
-    # ---- strategies (D-29, STRAT-01) ----
+    # ---- strategies (D-29, STRAT-01; D-50 dispatch + [custom] suffix) ----
     def do_strategies(self, arg):
-        """Wyświetl listę wbudowanych strategii."""
+        """Wyświetl listę wbudowanych i custom strategii."""
         print("Dostępne strategie:")
         for name in STRATEGIES.keys():
-            mod = importlib.import_module(f'sphsim.strategies.{name}')
-            description = mod.STRATEGY_META['description']
-            # Padding nazwy do 12 znaków, separator em-dash z otaczającymi spacjami (D-29).
-            print(f"  {name:<12}— {description}")
+            # D-50 dispatch namespace: built-in żyją w sphsim.strategies.<name>,
+            # custom w sphsim.custom.<name> (D-46 private namespace z loadera).
+            if name in BUILTIN_STRATEGIES:
+                mod = importlib.import_module(f'sphsim.strategies.{name}')
+                description = mod.STRATEGY_META['description']
+                # Padding nazwy do 12 znaków, separator em-dash (D-29).
+                print(f"  {name:<12}— {description}")
+            else:
+                mod = importlib.import_module(f'sphsim.custom.{name}')
+                description = mod.STRATEGY_META['description']
+                # D-50: suffix ` [custom]` po opisie (SC #4 ROADMAP).
+                print(f"  {name:<12}— {description} [custom]")
 
     # ---- strategy <name> (D-25/D-26/D-31/D-32, STRAT-02) ----
     def do_strategy(self, arg):
@@ -102,8 +112,9 @@ class SPHShell(cmd.Cmd):
             print(f"Strategia '{name}' nie istnieje. Dostępne: {available}.")
             return
 
-        # Valid name — załaduj metadane dynamicznie.
-        mod = importlib.import_module(f'sphsim.strategies.{name}')
+        # Valid name — załaduj metadane dynamicznie (D-50 dispatch namespace).
+        ns = 'sphsim.strategies' if name in BUILTIN_STRATEGIES else 'sphsim.custom'
+        mod = importlib.import_module(f'{ns}.{name}')
         meta = mod.STRATEGY_META
 
         # Description section
