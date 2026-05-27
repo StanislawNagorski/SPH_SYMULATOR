@@ -244,15 +244,91 @@ class TestPresetDistinguishability(unittest.TestCase):
 class TestConfigHeader(unittest.TestCase):
     """Tests format_config_header zwracającego 9-klucz tabelę MD (ENV-03 unit). Plan 03, Wave 3."""
 
-    def test_placeholder(self):
-        self.skipTest("Wave 3 implementation — class name locked by Plan 00")
+    def _make_args(self):
+        """Minimalny argparse.Namespace z polami czytanymi przez format_config_header."""
+        import argparse
+        return argparse.Namespace(nU=250, nSUS=20, T=1000, kappa=0.25, alpha=1, seed=42)
+
+    def test_header_contains_section_title(self):
+        """ENV-03: zwracany string zawiera literał '## Konfiguracja środowiska'."""
+        from sphsim.cli.output import format_config_header
+        args = self._make_args()
+        header = format_config_header(args, 100, 120, [0.1, 0.2, 0.3, 0.4, 1.0], [0.5, 0.5, 0.7, 1.5, 3.0])
+        self.assertIn('## Konfiguracja środowiska', header,
+                      msg=f'Brak tytułu sekcji w nagłówku: {header[:200]}')
+
+    def test_header_contains_md_table_structure(self):
+        """ENV-03: zwracany string zawiera nagłówek tabeli MD i separator."""
+        from sphsim.cli.output import format_config_header
+        args = self._make_args()
+        header = format_config_header(args, 100, 120, [0.1, 0.2, 0.3, 0.4, 1.0], [0.5, 0.5, 0.7, 1.5, 3.0])
+        self.assertIn('| Parametr | Wartość |', header,
+                      msg=f'Brak nagłówka tabeli w: {header[:200]}')
+        self.assertIn('|----------|---------|', header,
+                      msg=f'Brak separatora tabeli w: {header[:200]}')
+
+    def test_header_contains_all_9_param_labels(self):
+        """ENV-03: zwracany string zawiera wszystkie 9 etykiet parametrów."""
+        from sphsim.cli.output import format_config_header
+        args = self._make_args()
+        header = format_config_header(args, 100, 120, [0.1, 0.2, 0.3, 0.4, 1.0], [0.5, 0.5, 0.7, 1.5, 3.0])
+        for label in ['nU', 'T', 'κ (kappa)', 'α (alpha)', 'K0', 'K1', 'φ (phi)', 'ρ (rho)', 'seed']:
+            self.assertIn(label, header,
+                          msg=f'Brak etykiety "{label}" w nagłówku: {header[:400]}')
+
+    def test_header_renders_phi_and_rho_lists(self):
+        """ENV-03: phi/rho renderowane z 2 miejscami po przecinku przez ', '.join(f'{v:.2f}')."""
+        from sphsim.cli.output import format_config_header
+        args = self._make_args()
+        header = format_config_header(args, 100, 120, [0.1, 0.2, 0.3, 0.4, 1.0], [0.5, 0.5, 0.7, 1.5, 3.0])
+        self.assertIn('0.10, 0.20, 0.30, 0.40, 1.00', header,
+                      msg=f'Błędne formatowanie phi w nagłówku: {header[:400]}')
+        self.assertIn('0.50, 0.50, 0.70, 1.50, 3.00', header,
+                      msg=f'Błędne formatowanie rho w nagłówku: {header[:400]}')
+
+    def test_header_renders_K1_inf_as_unicode(self):
+        """ENV-03: K1=float('inf') renderowany jako '∞' (Unicode), nie 'inf'."""
+        from sphsim.cli.output import format_config_header
+        args = self._make_args()
+        header = format_config_header(args, 100, float('inf'), [0.1, 0.2, 0.3, 0.4, 1.0], [0.5, 0.5, 0.7, 1.5, 3.0])
+        self.assertIn('∞', header,
+                      msg=f'K1=inf powinien być renderowany jako ∞, nie "inf": {header[:400]}')
+        self.assertNotIn('inf', header,
+                         msg=f'Napis "inf" nie powinien pojawiać się w nagłówku gdy K1=inf: {header[:400]}')
 
 
 class TestHumanHeader(unittest.TestCase):
     """Tests że format_human zaczyna się od config header (ENV-03 integration). Plan 03, Wave 3."""
 
-    def test_placeholder(self):
-        self.skipTest("Wave 3 implementation — class name locked by Plan 00")
+    def test_human_output_starts_with_config_header(self):
+        """ENV-03: pierwsza niepusta linia stdout to '## Konfiguracja środowiska'."""
+        r = _run_sph('--strategy', 'naive', '--zeta', '0.5', '--no-agent', '--seed', '42')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'Oczekiwano exit 0, got {r.returncode}. stderr={r.stderr[:300]}')
+        non_empty_lines = [line for line in r.stdout.splitlines() if line.strip()]
+        self.assertTrue(len(non_empty_lines) > 0,
+                        msg='Brak niepustych linii w stdout')
+        self.assertEqual(non_empty_lines[0], '## Konfiguracja środowiska',
+                         msg=f'Pierwsza niepusta linia: {non_empty_lines[0]!r}')
+
+    def test_human_output_contains_full_table(self):
+        """ENV-03: stdout zawiera wszystkie 9 etykiet parametrów tabeli konfiguracji."""
+        r = _run_sph('--strategy', 'naive', '--zeta', '0.5', '--no-agent', '--seed', '42')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'Oczekiwano exit 0, got {r.returncode}. stderr={r.stderr[:300]}')
+        for label in ['nU', 'T', 'κ (kappa)', 'α (alpha)', 'K0', 'K1', 'φ (phi)', 'ρ (rho)', 'seed']:
+            self.assertIn(label, r.stdout,
+                          msg=f'Brak etykiety "{label}" w wyjściu: {r.stdout[:600]}')
+
+    def test_human_output_preserves_legacy_sections(self):
+        """ENV-03: nagłówek jest PREPENDED — sekcje SPH SYMULATOR i METRYKI nadal obecne."""
+        r = _run_sph('--strategy', 'naive', '--zeta', '0.5', '--no-agent', '--seed', '42')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'Oczekiwano exit 0, got {r.returncode}. stderr={r.stderr[:300]}')
+        self.assertIn('SPH SYMULATOR', r.stdout,
+                      msg=f'Brak banneru SPH SYMULATOR w wyjściu: {r.stdout[:600]}')
+        self.assertIn('METRYKI', r.stdout,
+                      msg=f'Brak sekcji METRYKI w wyjściu: {r.stdout[:600]}')
 
 
 if __name__ == '__main__':

@@ -37,6 +37,9 @@ def _make_args(**kwargs):
         strategy='naive', nU=300, nSUS=30, T=2000,
         kappa=1.0, alpha=1.0, verbose=False,
         no_agent=False,
+        # ENV-03 (Plan 03): format_config_header reads these fields from args
+        K0=100, phi=[0.1, 0.2, 0.3, 0.4, 1.0], rho=[0.5, 0.5, 0.7, 1.5, 3.0],
+        seed=42, valuation='window',
     )
     defaults.update(kwargs)
     return argparse.Namespace(**defaults)

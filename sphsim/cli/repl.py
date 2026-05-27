@@ -216,9 +216,12 @@ class SPHShell(cmd.Cmd):
 
         # D-41: format_human wymaga args-like Namespace (strategy/nU/nSUS/T/kappa/alpha/verbose).
         # no_agent=False: defensive consistency z format_json (Plan 03 T-04-20 mitigation).
+        # phi/rho/K0/valuation/seed: wymagane przez format_config_header (ENV-03, Pitfall 2 fix).
         fake_args = argparse.Namespace(
             strategy=name, nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, T=DEFAULT_T,
             kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA, verbose=False, no_agent=False,
+            phi=DEFAULT_PHI, rho=DEFAULT_RHO, K0=DEFAULT_K0, valuation='window',
+            seed=42,
         )
         print(format_human(fake_args, res, DEFAULT_K1, False))
 
@@ -280,10 +283,13 @@ class SPHShell(cmd.Cmd):
 
         # Render przez format_human → format_compare (Plan 03 dispatcher).
         # fake_args musi mieć no_agent=False (T-04-20 defensive consistency).
+        # phi/rho/K0/valuation/seed: wymagane przez format_config_header (ENV-03, Pitfall 2 fix).
         res_combined = {'comparison': comparison_block}
         fake_args = argparse.Namespace(
             strategy=name, nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, T=DEFAULT_T,
             kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA, verbose=False, no_agent=False,
+            phi=DEFAULT_PHI, rho=DEFAULT_RHO, K0=DEFAULT_K0, valuation='window',
+            seed=42,
         )
         print(format_human(fake_args, res_combined, DEFAULT_K1, False))
 
