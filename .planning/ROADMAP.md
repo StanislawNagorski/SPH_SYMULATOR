@@ -171,7 +171,7 @@ Plans:
 
 **Wave 1** *(blocked on Wave 0 completion)*
 
-- [ ] 05-01-PLAN.md — ENV-01: --phi/--rho argparse type= converters (Polish errors) + main.py threading + TestPhiRhoParsing/Flow
+- [x] 05-01-PLAN.md — ENV-01: --phi/--rho argparse type= converters (Polish errors) + main.py threading + TestPhiRhoParsing/Flow
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -229,6 +229,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Interactive CLI shell | 4/4 | Complete   | 2026-05-25 |
 | 3. Custom strategy loader | 4/4 | Complete   | 2026-05-27 |
 | 4. Rational Agent veto layer | 7/7 | Complete   | 2026-05-27 |
-| 5. Configurable environment | 1/5 | In Progress|  |
+| 5. Configurable environment | 2/5 | In Progress|  |
 | 6. Report + plots generator | 0/TBD | Not started | - |
 | 7. Batch runner + aggregation | 0/TBD | Not started | - |
