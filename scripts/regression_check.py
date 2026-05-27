@@ -38,7 +38,14 @@ from generate_baseline import INVOCATIONS, PROJECT_ROOT, FIXTURES_DIR, MONOLITH 
 # bez konieczności regeneracji ani touch'owania generate_baseline.py.
 # Phase 4 D-67: trzy nowe klucze w metrics są ignorowane przy compare z baseline_v1 fixtures —
 # fixtures są oracle dla v1.0 zachowania i nie zawierają tych pól. Pola obecne tylko w actual output.
-SKIP_KEYS = ('veto_per_phase', 'n_vetoed_total', 'agent_enabled')
+# Phase 5 (Strategia B, mirror Phase 4 D-67): pięć nowych kluczy w env bloku
+# (K0, phi, rho, seed, valuation) ignorowane przy compare z baseline_v1 fixtures —
+# fixtures są oracle dla zachowania v1.0 i nie zawierają tych pól. Pola obecne
+# tylko w actual output po Plan 03 rozszerzeniu format_json env block.
+SKIP_KEYS = (
+    'veto_per_phase', 'n_vetoed_total', 'agent_enabled',  # Phase 4 D-67 Strategia B
+    'K0', 'phi', 'rho', 'seed', 'valuation',              # Phase 5 ENV-03 (D-PH5 SKIP-EXT, mirroring D-67)
+)
 
 
 def deep_diff(expected, actual, path=''):
