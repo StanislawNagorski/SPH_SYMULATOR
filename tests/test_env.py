@@ -171,15 +171,74 @@ class TestValuationDispatch(unittest.TestCase):
 class TestValuationPresets(unittest.TestCase):
     """Tests integracyjne --valuation + --K0/--K1 override (ENV-02 integration). Plan 02, Wave 2."""
 
-    def test_placeholder(self):
-        self.skipTest("Wave 2 implementation — class name locked by Plan 00")
+    def test_window_preset_matches_baseline(self):
+        """ENV-02: --valuation window → avg_val_last100 == 92.0 (zachowanie v1.0)."""
+        r = _run_sph('--strategy', 'naive', '--zeta', '0.75', '--valuation', 'window',
+                     '--no-agent', '--seed', '42', '--json')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'Oczekiwano exit 0, got {r.returncode}. stderr={r.stderr[:300]}')
+        d = json.loads(r.stdout)
+        self.assertIn('metrics', d)
+        avg_val = d['metrics']['avg_val_last100']
+        self.assertEqual(avg_val, 92.0,
+                         msg=f'Preset window zeta=0.75 powinien dawać 92.0, got {avg_val}')
+
+    def test_K0_override_changes_kpi(self):
+        """ENV-02: --K0 80 dociera do symulatora — symulacja kończy się sukcesem i zwraca liczbę."""
+        r = _run_sph('--strategy', 'naive', '--zeta', '0.75', '--K0', '80',
+                     '--no-agent', '--seed', '42', '--json')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'Oczekiwano exit 0, got {r.returncode}. stderr={r.stderr[:300]}')
+        d = json.loads(r.stdout)
+        self.assertIn('metrics', d)
+        avg_val = d['metrics']['avg_val_last100']
+        self.assertIsInstance(avg_val, (int, float),
+                              msg=f'avg_val_last100 powinno być liczbą, got {type(avg_val)}')
+
+    def test_K1_override_with_valuation(self):
+        """ENV-02: --K0 100 --K1 200 → symulacja kończy się sukcesem z poprawnym JSON."""
+        r = _run_sph('--strategy', 'naive', '--zeta', '0.75', '--K0', '100', '--K1', '200',
+                     '--no-agent', '--seed', '42', '--json')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'Oczekiwano exit 0, got {r.returncode}. stderr={r.stderr[:300]}')
+        d = json.loads(r.stdout)
+        self.assertIn('metrics', d)
 
 
 class TestPresetDistinguishability(unittest.TestCase):
-    """Tests rozróżnialności KPI dla 3 presetów (ENV-02 SC-3). Plan 02, Wave 2."""
+    """Tests rozróżnialności KPI dla 3 presetów (ENV-02 SC-3). Plan 02, Wave 2.
 
-    def test_placeholder(self):
-        self.skipTest("Wave 2 implementation — class name locked by Plan 00")
+    SC-3 enforcement: all 3 presets MUST give distinct KPI on the same seed+strategy.
+    RESEARCH §B.7 mathematically proves distinguishability for the default env
+    (avg_providers ≈ 105, K0=100, K1=120) with --zeta 0.75.
+    If this test fails for window vs step (the most likely identical pair), it indicates
+    sph_stp is not threading preset (Pitfall 1).
+    Note: --zeta 0.5 produces avg_providers ≈ 67 < K0=100, so window==step numerically
+    (both return 0). --zeta 0.75 is required for distinguishability (avg_providers ≈ 105).
+    """
+
+    def _run_preset(self, preset):
+        """Uruchamia symulator z zadanym presetem, zwraca avg_val_last100."""
+        r = _run_sph('--strategy', 'naive', '--zeta', '0.75', '--no-agent', '--seed', '42',
+                     '--json', '--valuation', preset)
+        self.assertEqual(r.returncode, 0,
+                         msg=f'Preset {preset!r}: oczekiwano exit 0, got {r.returncode}. stderr={r.stderr[:300]}')
+        d = json.loads(r.stdout)
+        self.assertIn('metrics', d)
+        return d['metrics']['avg_val_last100']
+
+    def test_three_presets_give_distinct_kpi(self):
+        """SC-3: window/step/linear dają parami różne avg_val_last100 (seed=42, naive zeta=0.75)."""
+        window_kpi = self._run_preset('window')
+        step_kpi = self._run_preset('step')
+        linear_kpi = self._run_preset('linear')
+        self.assertNotEqual(window_kpi, step_kpi,
+                            msg=f'window={window_kpi} i step={step_kpi} dają ten sam KPI — '
+                                'preset nie dociera do sph_stp (Pitfall 1)')
+        self.assertNotEqual(step_kpi, linear_kpi,
+                            msg=f'step={step_kpi} i linear={linear_kpi} dają ten sam KPI')
+        self.assertNotEqual(window_kpi, linear_kpi,
+                            msg=f'window={window_kpi} i linear={linear_kpi} dają ten sam KPI')
 
 
 class TestConfigHeader(unittest.TestCase):
