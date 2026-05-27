@@ -125,6 +125,7 @@ class TestRunCompareFunction(unittest.TestCase):
             nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, K1=DEFAULT_K1, T=200,
             kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA, seed=42,
             expected_P=100.0,
+            phi=DEFAULT_PHI, rho=DEFAULT_RHO,  # Phase 5 ENV-01: wymagane przez run_compare
         )
         K1 = DEFAULT_K1
         params = {'zeta': 0.5, 'max_phase': 3, 'probs': '0.9,0.7,0.5,0.3,0.0',
