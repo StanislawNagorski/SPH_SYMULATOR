@@ -127,7 +127,29 @@ Plans:
   4. Komenda `/compare <strategia>` lub `--compare-agent` uruchamia tę samą strategię raz z `RationalAgent` i raz bez, a w raporcie pojawia się tabela delta KPI (`avg_val`, `avg_profit`, `delivery_ratio`) między obiema wersjami
   5. Dla scenariusza demonstracyjnego (np. `incentive --expected_P 30` gdzie strategia rekomenduje COMMIT przy ujemnym zysku) `with-agent` ma wyższy `avg_net_profit` niż `without-agent` — empiryczny dowód że weto chroni KPI
 
-**Plans**: TBD
+**Plans**: 7 plans
+Plans:
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — Device n_vetoed/veto_phase_stats + simulator 3-state interface + veto_per_phase aggregation
+- [ ] 04-02-PLAN.md — sphsim/agent/ package (rational.py wrap_with_agent closure factory, D-53 formula)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 04-03-PLAN.md — output.py: VETO section in format_human + format_compare delta table + format_json extensions (agent_enabled, comparison)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 04-04-PLAN.md — CLI: args.py (--no-agent + --compare-agent + mutex) + main.py wrap + run_compare
+- [ ] 04-05-PLAN.md — REPL: do_compare command + do_run wrap (agent default-on) + do_help update
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 04-06-PLAN.md — tests/test_agent.py (10+ cases, TDD) + scripts/generate_baseline.py --no-agent (D-59) + regression PASS=8/8
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 04-07-PLAN.md — scripts/verify_phase4.sh phase exit gate (5 ROADMAP SC + regression + tests + invariants + SC#5 empirical)
 
 ### Phase 5: Configurable environment
 
@@ -186,7 +208,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Refactoring foundation | 5/5 | Complete   | 2026-05-25 |
 | 2. Interactive CLI shell | 4/4 | Complete   | 2026-05-25 |
 | 3. Custom strategy loader | 4/4 | Complete   | 2026-05-27 |
-| 4. Rational Agent veto layer | 0/TBD | Not started | - |
+| 4. Rational Agent veto layer | 0/7 | In progress | - |
 | 5. Configurable environment | 0/TBD | Not started | - |
 | 6. Report + plots generator | 0/TBD | Not started | - |
 | 7. Batch runner + aggregation | 0/TBD | Not started | - |
