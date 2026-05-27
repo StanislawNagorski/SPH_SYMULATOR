@@ -17,3 +17,10 @@ STRATEGIES = {
     'incentive': strategy_incentive,
     'adaptive': strategy_adaptive,
 }
+
+# D-49 — frozenset snapshot 5 wbudowanych strategii Phase 1. Używana do detekcji
+# kolizji w loaderze custom strategii (Phase 3) ZANIM dojdzie do runtime'owej
+# rejestracji oraz do dispatch namespace w `do_strategies`/`do_strategy` (D-50).
+# NIE używamy `STRATEGIES.keys()` bo po custom load zawierałby też custom,
+# co psułoby collision-check (custom-vs-custom = reload per D-38, NIE error).
+BUILTIN_STRATEGIES = frozenset(STRATEGIES.keys())
