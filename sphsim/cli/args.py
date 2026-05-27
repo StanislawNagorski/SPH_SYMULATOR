@@ -48,7 +48,8 @@ def parse_args():
     p.add_argument('--probs',      type=str,   default='0.9,0.7,0.5,0.3,0.0',
                    help='[phase_prob] P(COMMIT) per faza, po przecinku')
     p.add_argument('--s_target',   type=int,   default=10,    help='[adaptive] Próg SUS')
-    p.add_argument('--expected_P', type=float, default=100.0, help='[incentive] Oczek. płatność')
+    p.add_argument('--expected_P', type=float, default=100.0,
+                   help='[incentive|agent] Oczek. płatność (def 100.0)')
     # Param custom strategii (poza mutex; D-39, repeatable, działa tylko z --custom)
     p.add_argument('--param', action='append', dest='param', default=[], metavar='K=V',
                    help='[--custom] Parametr custom strategii, np. --param zeta=0.7 (repeatable)')
@@ -62,4 +63,14 @@ def parse_args():
     p.add_argument('--seed', type=int,   default=42,            help='Ziarno losowe (def 42)')
     p.add_argument('--json', action='store_true', help='Wynik jako JSON (do parsowania)')
     p.add_argument('--verbose', action='store_true', help='Szczegółowe logi co 100 cykli')
-    return p.parse_args()
+    p.add_argument('--no-agent', action='store_true',
+                   help='Wyłącz RationalAgent (surowa strategia, bez veto)')
+    p.add_argument('--compare-agent', action='store_true',
+                   help='Uruchom 2x: z agentem i bez — tabela delta KPI')
+    args = p.parse_args()
+    # Post-parse mutex checks (D-60) — twarde błędy z polskim komunikatem.
+    if args.compare_agent and args.no_agent:
+        p.error("Flagi --compare-agent i --no-agent są wzajemnie wykluczające.")
+    if args.compare_agent and args.interactive:
+        p.error("Flaga --compare-agent nie działa w trybie --interactive.")
+    return args
