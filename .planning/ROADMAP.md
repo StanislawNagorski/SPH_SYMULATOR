@@ -167,7 +167,7 @@ Plans:
 Plans:
 **Wave 0** *(scaffolding)*
 
-- [ ] 05-00-PLAN.md — tests/test_env.py 7-class stub + scripts/verify_phase5.sh skeleton (locks taxonomy for Waves 1-4)
+- [x] 05-00-PLAN.md — tests/test_env.py 7-class stub + scripts/verify_phase5.sh skeleton (locks taxonomy for Waves 1-4)
 
 **Wave 1** *(blocked on Wave 0 completion)*
 
@@ -229,6 +229,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Interactive CLI shell | 4/4 | Complete   | 2026-05-25 |
 | 3. Custom strategy loader | 4/4 | Complete   | 2026-05-27 |
 | 4. Rational Agent veto layer | 7/7 | Complete   | 2026-05-27 |
-| 5. Configurable environment | 0/5 | Not started | - |
+| 5. Configurable environment | 1/5 | In Progress|  |
 | 6. Report + plots generator | 0/TBD | Not started | - |
 | 7. Batch runner + aggregation | 0/TBD | Not started | - |
