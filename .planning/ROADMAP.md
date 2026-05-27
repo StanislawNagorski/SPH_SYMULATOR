@@ -175,7 +175,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 05-02-PLAN.md — ENV-02: --K0/--valuation flags + valuation/sph_stp preset dispatch + simulator threading + TestValuationDispatch/Presets/Distinguishability (SC-3)
+- [x] 05-02-PLAN.md — ENV-02: --K0/--valuation flags + valuation/sph_stp preset dispatch + simulator threading + TestValuationDispatch/Presets/Distinguishability (SC-3)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -229,6 +229,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Interactive CLI shell | 4/4 | Complete   | 2026-05-25 |
 | 3. Custom strategy loader | 4/4 | Complete   | 2026-05-27 |
 | 4. Rational Agent veto layer | 7/7 | Complete   | 2026-05-27 |
-| 5. Configurable environment | 2/5 | In Progress|  |
+| 5. Configurable environment | 3/5 | In Progress|  |
 | 6. Report + plots generator | 0/TBD | Not started | - |
 | 7. Batch runner + aggregation | 0/TBD | Not started | - |
