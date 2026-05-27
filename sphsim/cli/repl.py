@@ -222,6 +222,71 @@ class SPHShell(cmd.Cmd):
         )
         print(format_human(fake_args, res, DEFAULT_K1, False))
 
+    # ---- compare <name> [k=v ...] (D-61, AGENT-05) ----
+    def do_compare(self, arg):
+        """Porównaj strategię z i bez RationalAgent: compare <nazwa> [param=wartość ...]"""
+        tokens = arg.split()
+        if not tokens:
+            # D-61 — komunikat identyczny w stylu do do_run D-42.
+            print("Użycie: compare <nazwa> [param=wartość ...]. Wpisz 'strategies' żeby zobaczyć dostępne.")
+            return
+        name, *kv_tokens = tokens
+
+        if name not in STRATEGIES:
+            # D-31 style — live STRATEGIES.keys() (custom widoczne po `custom <path>`).
+            available = ', '.join(STRATEGIES.keys())
+            print(f"Strategia '{name}' nie istnieje. Dostępne: {available}.")
+            return
+
+        # D-50 dispatch namespace: built-in w sphsim.strategies.<name>,
+        # custom w sphsim.custom.<name> (D-46 private namespace z loadera).
+        ns = 'sphsim.strategies' if name in BUILTIN_STRATEGIES else 'sphsim.custom'
+        mod = importlib.import_module(f'{ns}.{name}')
+        meta = mod.STRATEGY_META
+
+        try:
+            params = parse_params_from_meta(kv_tokens, meta, name)
+        except LoaderError as e:
+            print(e.args[0])
+            return
+
+        # D-54: expected_P pochodzi z params dict (wspólne źródło prawdy).
+        raw_strategy_fn = STRATEGIES[name]
+        expected_P = params.get('expected_P', DEFAULT_K0)
+
+        # D-61: oba run'y z tym samym seed=42 (Claude's Discretion — determinizm porównania).
+        common = dict(
+            nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, K0=DEFAULT_K0, K1=DEFAULT_K1, F=DEFAULT_F,
+            T=DEFAULT_T, kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA,
+            phi=DEFAULT_PHI, rho=DEFAULT_RHO, params=params, seed=42,
+        )
+
+        # Run 1: z agentem (D-58 wrapper default-on).
+        sim_with = SPHSimulator(strategy_fn=wrap_with_agent(raw_strategy_fn, expected_P), **common)
+        res_with = sim_with.run()
+
+        # Run 2: bez agenta (surowa strategia).
+        sim_without = SPHSimulator(strategy_fn=raw_strategy_fn, **common)
+        res_without = sim_without.run()
+
+        # D-62: 5 KPI delta dict.
+        KPIS = ['avg_val_last100', 'cum_val_total', 'avg_net_profit', 'delivery_ratio', 'avg_providers_l100']
+        comparison_block = {
+            'with_agent': {k: v for k, v in res_with.items() if k not in ('history', 'devices')},
+            'without_agent': {k: v for k, v in res_without.items() if k not in ('history', 'devices')},
+            'delta': {k: res_with[k] - res_without[k] for k in KPIS},
+            'agent_helps': res_with['avg_net_profit'] > res_without['avg_net_profit'],
+        }
+
+        # Render przez format_human → format_compare (Plan 03 dispatcher).
+        # fake_args musi mieć no_agent=False (T-04-20 defensive consistency).
+        res_combined = {'comparison': comparison_block}
+        fake_args = argparse.Namespace(
+            strategy=name, nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, T=DEFAULT_T,
+            kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA, verbose=False, no_agent=False,
+        )
+        print(format_human(fake_args, res_combined, DEFAULT_K1, False))
+
     # ---- default — nieznana komenda (D-30) ----
     def default(self, line):
         """Override cmd.Cmd default — Polski komunikat dla nieznanych komend."""
