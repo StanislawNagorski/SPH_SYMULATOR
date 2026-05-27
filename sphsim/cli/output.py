@@ -7,8 +7,10 @@ def format_json(args, res, params, K1):
     out = {
         'strategy': args.strategy,
         'strategy_params': params,
-        'env': {'nU': args.nU, 'nSUS': args.nSUS, 'K1': K1,
-                'T': args.T, 'kappa': args.kappa, 'alpha': args.alpha},
+        'env': {'nU': args.nU, 'nSUS': args.nSUS, 'K0': args.K0, 'K1': K1,
+                'T': args.T, 'kappa': args.kappa, 'alpha': args.alpha,
+                'phi': args.phi, 'rho': args.rho, 'seed': args.seed,
+                'valuation': args.valuation},
     }
     if 'comparison' in res:
         # Tryb --compare-agent: zastąp 'metrics' blokiem 'comparison' (D-67).
@@ -20,6 +22,31 @@ def format_json(args, res, params, K1):
             'agent_enabled': not args.no_agent,
         }
     return json.dumps(out, indent=2)
+
+
+def format_config_header(args, K0, K1, phi, rho) -> str:
+    """Serializuje konfigurację środowiska do tabeli Markdown (ENV-03, SC-4).
+    Zwracany string to walidna tabela MD — Phase 6 może go wkleić bezpośrednio do report.md.
+    """
+    phi_str = ', '.join(f'{v:.2f}' for v in phi)
+    rho_str = ', '.join(f'{v:.2f}' for v in rho)
+    k1_display = '∞' if K1 == float('inf') else str(K1)
+    lines = [
+        '## Konfiguracja środowiska',
+        '',
+        '| Parametr | Wartość |',
+        '|----------|---------|',
+        f'| nU       | {args.nU} |',
+        f'| T        | {args.T} |',
+        f'| κ (kappa) | {args.kappa} |',
+        f'| α (alpha) | {args.alpha} |',
+        f'| K0       | {K0} |',
+        f'| K1       | {k1_display} |',
+        f'| φ (phi)  | {phi_str} |',
+        f'| ρ (rho)  | {rho_str} |',
+        f'| seed     | {args.seed} |',
+    ]
+    return '\n'.join(lines)
 
 
 def format_compare(args, comp, K1):
@@ -98,7 +125,7 @@ def format_human(args, res, K1, verbose):
     if 'comparison' in res:
         return format_compare(args, res['comparison'], K1)
 
-    lines = []
+    lines = [format_config_header(args, args.K0, K1, args.phi, args.rho), '']
     sep = '─' * 62
     lines.append(f"\n{'='*62}")
     lines.append(f"  SPH SYMULATOR  |  Strategia: {args.strategy.upper()}")
