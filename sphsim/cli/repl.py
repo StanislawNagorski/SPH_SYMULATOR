@@ -1,24 +1,36 @@
-"""REPL — tryb interaktywny SPH symulatora (Phase 2).
+"""REPL — tryb interaktywny SPH symulatora (Phase 2 + Phase 3 custom loader).
 
-Klasa SPHShell(cmd.Cmd) udostępnia 4 komendy bez prefiksu '/':
+Klasa SPHShell(cmd.Cmd) udostępnia 6 komend bez prefiksu '/':
   - help        — lista komend (D-17, CLI-02)
   - exit        — zakończ sesję (D-20, CLI-03)
-  - strategies  — lista wbudowanych strategii (D-29, STRAT-01)
-  - strategy <nazwa>  — szczegóły strategii: opis, parametry, baseline KPI (D-25/D-26, STRAT-02)
+  - strategies  — lista wbudowanych i custom strategii (D-29/D-50, STRAT-01)
+  - strategy <nazwa>             — szczegóły strategii (D-25/D-26, STRAT-02)
+  - custom <ścieżka> [k=v ...]   — załaduj custom strategię z pliku .py (D-37/D-38, STRAT-03)
+  - run <nazwa> [k=v ...]        — uruchom symulację built-in lub custom (D-41/D-42)
 
 Funkcja run_repl() jest jedynym publicznym entry-pointem — wywoływana z
 sphsim/cli/main.py gdy args.interactive jest True (D-15).
 
 Wszystkie komunikaty użytkownika po polsku (PROJECT.md constraint).
-Stdlib only: cmd + readline + importlib + os + atexit (D-18, D-19).
+Stdlib only: cmd + readline + importlib + os + sys + argparse + atexit (D-18, D-19); plugin loader (D-46).
 """
+import argparse
 import atexit
 import cmd
 import importlib
 import os
+import sys
 import readline  # noqa: F401 — side effect: cmd.Cmd używa readline dla line-editing na POSIX
 
 from sphsim.strategies import STRATEGIES
+from sphsim.strategies import BUILTIN_STRATEGIES
+from sphsim.strategies.loader import load_custom, parse_params_from_meta, LoaderError
+from sphsim.core.simulator import SPHSimulator
+from sphsim.cli.output import format_human
+from sphsim.config import (
+    DEFAULT_NU, DEFAULT_NSUS, DEFAULT_K0, DEFAULT_K1, DEFAULT_F,
+    DEFAULT_T, DEFAULT_KAPPA, DEFAULT_ALPHA, DEFAULT_PHI, DEFAULT_RHO,
+)
 
 
 HISTORY_FILE = os.path.expanduser('~/.sphsim_history')
@@ -107,6 +119,89 @@ class SPHShell(cmd.Cmd):
         if baseline is not None:
             print("Baseline KPI:")
             print(f"  {baseline['invocation']} → avg_val_last100 = {baseline['avg_val_last100']}")
+
+    # ---- custom <path> [k=v ...] (D-37/D-38/D-43/D-46/D-48, STRAT-03) ----
+    def do_custom(self, arg):
+        """Załaduj custom strategię z pliku .py. Składnia: custom <ścieżka> [param=wartość ...]"""
+        # D-43 pozycyjne parsing: split na whitespace; pierwszy token = ścieżka,
+        # reszta = tokeny k=v. Ścieżki ze spacjami NIE są wspierane.
+        parts = arg.split()
+        if not parts:
+            print("Użycie: custom <ścieżka> [param=wartość ...].")
+            return
+        path, *param_tokens = parts
+
+        # D-38 reload detection: sprawdź `sys.modules` PRZED loaderem, bo loader
+        # zarejestruje fresh module nadpisując istniejący wpis.
+        basename_check = os.path.splitext(os.path.basename(os.path.abspath(os.path.expanduser(path))))[0]
+        was_loaded = f'sphsim.custom.{basename_check}' in sys.modules
+
+        # D-48: LoaderError → polski one-liner na stdout (NIE stderr, NIE crash REPL'a).
+        try:
+            name, fn, meta = load_custom(path)
+        except LoaderError as e:
+            print(e.args[0])
+            return
+
+        try:
+            params = parse_params_from_meta(param_tokens, meta, name)
+        except LoaderError as e:
+            print(e.args[0])
+            return
+
+        # D-46: rejestracja w wywołującym (loader jest pure).
+        STRATEGIES[name] = fn
+
+        # D-38: reload-aware komunikat (verbatim "Załadowano custom" / "Przeładowano custom").
+        if was_loaded:
+            print(f"Przeładowano custom strategię '{name}'.")
+        else:
+            print(f"Załadowano custom strategię '{name}'.")
+
+    # ---- run <name> [k=v ...] (D-41/D-42/D-50) ----
+    def do_run(self, arg):
+        """Uruchom symulację: run <nazwa> [param=wartość ...]"""
+        tokens = arg.split()
+        if not tokens:
+            # D-42 verbatim
+            print("Użycie: run <nazwa> [param=wartość ...]. Wpisz 'strategies' żeby zobaczyć dostępne.")
+            return
+        name, *kv_tokens = tokens
+
+        if name not in STRATEGIES:
+            # D-42 verbatim — live STRATEGIES.keys() (custom widoczne po `custom <path>`).
+            available = ', '.join(STRATEGIES.keys())
+            print(f"Strategia '{name}' nie istnieje. Dostępne: {available}.")
+            return
+
+        # D-50 dispatch namespace: built-in w sphsim.strategies.<name>,
+        # custom w sphsim.custom.<name> (D-46 private namespace z loadera).
+        ns = 'sphsim.strategies' if name in BUILTIN_STRATEGIES else 'sphsim.custom'
+        mod = importlib.import_module(f'{ns}.{name}')
+        meta = mod.STRATEGY_META
+
+        try:
+            params = parse_params_from_meta(kv_tokens, meta, name)
+        except LoaderError as e:
+            print(e.args[0])
+            return
+
+        # D-41: build SPHSimulator z DEFAULT_* env params (Phase 5 doda override).
+        # Seed=42 hardcoded dla determinizmu w sesji REPL'a.
+        sim = SPHSimulator(
+            nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, K0=DEFAULT_K0, K1=DEFAULT_K1, F=DEFAULT_F,
+            T=DEFAULT_T, kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA,
+            phi=DEFAULT_PHI, rho=DEFAULT_RHO,
+            strategy_fn=STRATEGIES[name], params=params, seed=42,
+        )
+        res = sim.run()
+
+        # D-41: format_human wymaga args-like Namespace (strategy/nU/nSUS/T/kappa/alpha/verbose).
+        fake_args = argparse.Namespace(
+            strategy=name, nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, T=DEFAULT_T,
+            kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA, verbose=False,
+        )
+        print(format_human(fake_args, res, DEFAULT_K1, False))
 
     # ---- default — nieznana komenda (D-30) ----
     def default(self, line):
