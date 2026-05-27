@@ -66,7 +66,12 @@ class SPHSimulator:
                         providers.append(dev)
                         dev.n_delivered += 1
                         total_deliv += 1
-                else:
+                elif decision == 'VETO':
+                    # n_vetoed inkrementowane w wrapperze (PRZED return 'VETO').
+                    # Tutaj tylko stan: identycznie jak ABSTAIN, ale BEZ n_abstain++ (D-65).
+                    dev.status = 'DOWN'
+                    dev.down_left = 1
+                else:  # 'ABSTAIN' lub nieznany decision — failsafe (T-04-04)
                     dev.n_abstain += 1
                     dev.status = 'DOWN'
                     dev.down_left = 1
@@ -137,6 +142,14 @@ class SPHSimulator:
                     'ic_satisfied': avg_net > 0,
                 }
 
+        # Aggregate per-phase VETO stats across all devices (Phase 4 D-64)
+        veto_per_phase = {}
+        n_vetoed_total = 0
+        for dev in self.devices:
+            for ph, count in dev.veto_phase_stats.items():
+                veto_per_phase[ph] = veto_per_phase.get(ph, 0) + count
+                n_vetoed_total += count
+
         return {
             'avg_val_last100':    round(sum(self.history['val'][last100]) / 100, 4),
             'cum_val_total':      round(total_val, 2),
@@ -145,6 +158,8 @@ class SPHSimulator:
             'avg_providers_l100': round(sum(self.history['providers'][last100]) / 100, 2),
             'sus_final':          self.s,
             'ic_per_phase':       ic_results,
+            'veto_per_phase':     veto_per_phase,
+            'n_vetoed_total':     n_vetoed_total,
             'history':            self.history,
             'devices':            self.devices,
         }
