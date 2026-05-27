@@ -18,10 +18,12 @@ class Device:
     n_abstain: int = 0
     n_delivered: int = 0
     n_failed: int = 0
+    n_vetoed: int = 0
 
     def __post_init__(self):
         # Per-phase IC tracking: phase -> {commits, deliveries, failures, earnings, costs}
         self.phase_stats = {}
+        self.veto_phase_stats = {}  # {phase: count} — Phase 4 D-64
 
     def record_commit(self, phase, cost):
         s = self.phase_stats.setdefault(phase, {'commits': 0, 'deliveries': 0, 'failures': 0, 'earnings': 0.0, 'costs': 0.0})
