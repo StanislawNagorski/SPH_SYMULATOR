@@ -300,8 +300,35 @@ class TestConfigHeader(unittest.TestCase):
 class TestHumanHeader(unittest.TestCase):
     """Tests że format_human zaczyna się od config header (ENV-03 integration). Plan 03, Wave 3."""
 
-    def test_placeholder(self):
-        self.skipTest("Wave 3 implementation — class name locked by Plan 00")
+    def test_human_output_starts_with_config_header(self):
+        """ENV-03: pierwsza niepusta linia stdout to '## Konfiguracja środowiska'."""
+        r = _run_sph('--strategy', 'naive', '--zeta', '0.5', '--no-agent', '--seed', '42')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'Oczekiwano exit 0, got {r.returncode}. stderr={r.stderr[:300]}')
+        non_empty_lines = [line for line in r.stdout.splitlines() if line.strip()]
+        self.assertTrue(len(non_empty_lines) > 0,
+                        msg='Brak niepustych linii w stdout')
+        self.assertEqual(non_empty_lines[0], '## Konfiguracja środowiska',
+                         msg=f'Pierwsza niepusta linia: {non_empty_lines[0]!r}')
+
+    def test_human_output_contains_full_table(self):
+        """ENV-03: stdout zawiera wszystkie 9 etykiet parametrów tabeli konfiguracji."""
+        r = _run_sph('--strategy', 'naive', '--zeta', '0.5', '--no-agent', '--seed', '42')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'Oczekiwano exit 0, got {r.returncode}. stderr={r.stderr[:300]}')
+        for label in ['nU', 'T', 'κ (kappa)', 'α (alpha)', 'K0', 'K1', 'φ (phi)', 'ρ (rho)', 'seed']:
+            self.assertIn(label, r.stdout,
+                          msg=f'Brak etykiety "{label}" w wyjściu: {r.stdout[:600]}')
+
+    def test_human_output_preserves_legacy_sections(self):
+        """ENV-03: nagłówek jest PREPENDED — sekcje SPH SYMULATOR i METRYKI nadal obecne."""
+        r = _run_sph('--strategy', 'naive', '--zeta', '0.5', '--no-agent', '--seed', '42')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'Oczekiwano exit 0, got {r.returncode}. stderr={r.stderr[:300]}')
+        self.assertIn('SPH SYMULATOR', r.stdout,
+                      msg=f'Brak banneru SPH SYMULATOR w wyjściu: {r.stdout[:600]}')
+        self.assertIn('METRYKI', r.stdout,
+                      msg=f'Brak sekcji METRYKI w wyjściu: {r.stdout[:600]}')
 
 
 if __name__ == '__main__':
