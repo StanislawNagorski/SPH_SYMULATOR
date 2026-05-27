@@ -132,11 +132,11 @@ Plans:
 **Wave 1**
 
 - [x] 04-01-PLAN.md — Device n_vetoed/veto_phase_stats + simulator 3-state interface + veto_per_phase aggregation
-- [ ] 04-02-PLAN.md — sphsim/agent/ package (rational.py wrap_with_agent closure factory, D-53 formula)
+- [x] 04-02-PLAN.md — sphsim/agent/ package (rational.py wrap_with_agent closure factory, D-53 formula)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 04-03-PLAN.md — output.py: VETO section in format_human + format_compare delta table + format_json extensions (agent_enabled, comparison)
+- [x] 04-03-PLAN.md — output.py: VETO section in format_human + format_compare delta table + format_json extensions (agent_enabled, comparison)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -208,7 +208,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Refactoring foundation | 5/5 | Complete   | 2026-05-25 |
 | 2. Interactive CLI shell | 4/4 | Complete   | 2026-05-25 |
 | 3. Custom strategy loader | 4/4 | Complete   | 2026-05-27 |
-| 4. Rational Agent veto layer | 1/7 | In Progress|  |
+| 4. Rational Agent veto layer | 3/7 | In Progress|  |
 | 5. Configurable environment | 0/TBD | Not started | - |
 | 6. Report + plots generator | 0/TBD | Not started | - |
 | 7. Batch runner + aggregation | 0/TBD | Not started | - |
