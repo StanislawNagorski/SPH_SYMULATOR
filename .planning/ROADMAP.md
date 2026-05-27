@@ -20,7 +20,7 @@ Note: v1.0 nie był śledzony w GSD — istnieje jako "Validated" w PROJECT.md (
 - [x] **Phase 1: Refactoring foundation** - Split `sph_sim.py` into package (`strategies/`, `agent/`, `report/`, `cli/`) preserving v1.0 CLI behavior (completed 2026-05-25)
 - [x] **Phase 2: Interactive CLI shell** - REPL z `/help`, `/exit`, `/strategies`, `/strategy <nazwa>` (completed 2026-05-25)
 - [x] **Phase 3: Custom strategy loader** - `importlib`-based loader plików `.py` + walidacja + szablon przykładowy (completed 2026-05-27)
-- [ ] **Phase 4: Rational Agent veto layer** - Wrapper weto'ujący COMMIT przy `E[zysk] < 0` + tryb porównawczy
+- [x] **Phase 4: Rational Agent veto layer** - Wrapper weto'ujący COMMIT przy `E[zysk] < 0` + tryb porównawczy (completed 2026-05-27)
 - [ ] **Phase 5: Configurable environment** - Override `φ/ρ`, presety waluacji, serializacja konfiguracji do raportu
 - [ ] **Phase 6: Report + plots generator** - Raport MD + 2 wykresy PNG (matplotlib) generowane zawsze
 - [ ] **Phase 7: Batch runner + aggregation** - Wiele seedów, agregacja statystyczna, box-ploty
@@ -149,7 +149,7 @@ Plans:
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
-- [ ] 04-07-PLAN.md — scripts/verify_phase4.sh phase exit gate (5 ROADMAP SC + regression + tests + invariants + SC#5 empirical)
+- [x] 04-07-PLAN.md — scripts/verify_phase4.sh phase exit gate (5 ROADMAP SC + regression + tests + invariants + SC#5 empirical)
 
 ### Phase 5: Configurable environment
 
@@ -208,7 +208,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Refactoring foundation | 5/5 | Complete   | 2026-05-25 |
 | 2. Interactive CLI shell | 4/4 | Complete   | 2026-05-25 |
 | 3. Custom strategy loader | 4/4 | Complete   | 2026-05-27 |
-| 4. Rational Agent veto layer | 6/7 | In Progress|  |
+| 4. Rational Agent veto layer | 7/7 | Complete   | 2026-05-27 |
 | 5. Configurable environment | 0/TBD | Not started | - |
 | 6. Report + plots generator | 0/TBD | Not started | - |
 | 7. Batch runner + aggregation | 0/TBD | Not started | - |
