@@ -25,7 +25,7 @@ DOSTĘPNE STRATEGIE:
   adaptive    -- COMMIT zależnie od poziomu bufora SUS
 """
 import argparse
-from sphsim.strategies import STRATEGIES
+from sphsim.strategies import STRATEGIES, BUILTIN_STRATEGIES
 from sphsim.config import DEFAULT_NU, DEFAULT_NSUS, DEFAULT_K1, DEFAULT_T, DEFAULT_KAPPA, DEFAULT_ALPHA
 
 
@@ -38,8 +38,10 @@ def parse_args():
     mutex = p.add_mutually_exclusive_group(required=True)
     mutex.add_argument('--interactive', action='store_true',
                        help='Uruchom tryb interaktywny (REPL)')
-    mutex.add_argument('--strategy', choices=list(STRATEGIES.keys()),
-                       help='Strategia: ' + ', '.join(STRATEGIES.keys()))
+    mutex.add_argument('--strategy', choices=list(BUILTIN_STRATEGIES),
+                       help='Strategia: ' + ', '.join(sorted(BUILTIN_STRATEGIES)))
+    mutex.add_argument('--custom',   type=str, default=None,
+                       help='Ścieżka do pliku .py z custom strategią')
     # Parametry strategii
     p.add_argument('--zeta',       type=float, default=0.5,   help='[naive] Frakcja COMMIT (0..1)')
     p.add_argument('--max_phase',  type=int,   default=3,     help='[threshold] Max faza COMMIT')
@@ -47,6 +49,9 @@ def parse_args():
                    help='[phase_prob] P(COMMIT) per faza, po przecinku')
     p.add_argument('--s_target',   type=int,   default=10,    help='[adaptive] Próg SUS')
     p.add_argument('--expected_P', type=float, default=100.0, help='[incentive] Oczek. płatność')
+    # Param custom strategii (poza mutex; D-39, repeatable, działa tylko z --custom)
+    p.add_argument('--param', action='append', dest='param', default=[], metavar='K=V',
+                   help='[--custom] Parametr custom strategii, np. --param zeta=0.7 (repeatable)')
     # Parametry środowiska
     p.add_argument('--nU',   type=int,   default=DEFAULT_NU,    help=f'Liczba urządzeń (def {DEFAULT_NU})')
     p.add_argument('--nSUS', type=int,   default=DEFAULT_NSUS,  help=f'Pojemność SUS (def {DEFAULT_NSUS})')
