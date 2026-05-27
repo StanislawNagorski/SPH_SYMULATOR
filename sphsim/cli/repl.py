@@ -1,12 +1,13 @@
-"""REPL — tryb interaktywny SPH symulatora (Phase 2 + Phase 3 custom loader).
+"""REPL — tryb interaktywny SPH symulatora (Phase 2 + Phase 3 + Phase 4 agent).
 
-Klasa SPHShell(cmd.Cmd) udostępnia 6 komend bez prefiksu '/':
+Klasa SPHShell(cmd.Cmd) udostępnia 7 komend bez prefiksu '/':
   - help        — lista komend (D-17, CLI-02)
   - exit        — zakończ sesję (D-20, CLI-03)
   - strategies  — lista wbudowanych i custom strategii (D-29/D-50, STRAT-01)
   - strategy <nazwa>             — szczegóły strategii (D-25/D-26, STRAT-02)
   - custom <ścieżka> [k=v ...]   — załaduj custom strategię z pliku .py (D-37/D-38, STRAT-03)
   - run <nazwa> [k=v ...]        — uruchom symulację built-in lub custom (D-41/D-42)
+  - compare <nazwa> [k=v ...]    — porównaj strategię z/bez RationalAgent (D-61, AGENT-05)
 
 Funkcja run_repl() jest jedynym publicznym entry-pointem — wywoływana z
 sphsim/cli/main.py gdy args.interactive jest True (D-15).
@@ -26,6 +27,7 @@ from sphsim.strategies import STRATEGIES
 from sphsim.strategies import BUILTIN_STRATEGIES
 from sphsim.strategies.loader import load_custom, parse_params_from_meta, LoaderError
 from sphsim.core.simulator import SPHSimulator
+from sphsim.agent import wrap_with_agent
 from sphsim.cli.output import format_human
 from sphsim.config import (
     DEFAULT_NU, DEFAULT_NSUS, DEFAULT_K0, DEFAULT_K1, DEFAULT_F,
@@ -49,7 +51,7 @@ INTRO = (
 
 
 class SPHShell(cmd.Cmd):
-    """Interaktywny REPL — 4 komendy bez slasha (D-17)."""
+    """Interaktywny REPL — 7 komend bez slasha (D-17, Phase 4 dodaje compare)."""
 
     intro = INTRO
     prompt = 'sph> '  # D-22 — krótkie, bez ANSI
@@ -64,6 +66,7 @@ class SPHShell(cmd.Cmd):
         print("  strategy <nazwa>                — Wyświetl szczegóły strategii (parametry, baseline KPI).")
         print("  custom <ścieżka> [k=v ...]      — Załaduj custom strategię z pliku .py.")
         print("  run <nazwa> [k=v ...]           — Uruchom symulację (built-in lub custom).")
+        print("  compare <nazwa> [k=v ...]       — Porównaj strategię z i bez RationalAgent (delta KPI).")
 
     # ---- exit (D-20, CLI-03) ----
     def do_exit(self, arg):
@@ -197,20 +200,25 @@ class SPHShell(cmd.Cmd):
             print(e.args[0])
             return
 
+        # D-58: agent default-on w REPL run. Opakowuje strategię przed budową SPHSimulator.
+        # expected_P pochodzi z params dict (D-54 — wspólne źródło prawdy dla incentive + agenta).
+        strategy_fn = wrap_with_agent(STRATEGIES[name], params.get('expected_P', DEFAULT_K0))
+
         # D-41: build SPHSimulator z DEFAULT_* env params (Phase 5 doda override).
         # Seed=42 hardcoded dla determinizmu w sesji REPL'a.
         sim = SPHSimulator(
             nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, K0=DEFAULT_K0, K1=DEFAULT_K1, F=DEFAULT_F,
             T=DEFAULT_T, kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA,
             phi=DEFAULT_PHI, rho=DEFAULT_RHO,
-            strategy_fn=STRATEGIES[name], params=params, seed=42,
+            strategy_fn=strategy_fn, params=params, seed=42,
         )
         res = sim.run()
 
         # D-41: format_human wymaga args-like Namespace (strategy/nU/nSUS/T/kappa/alpha/verbose).
+        # no_agent=False: defensive consistency z format_json (Plan 03 T-04-20 mitigation).
         fake_args = argparse.Namespace(
             strategy=name, nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, T=DEFAULT_T,
-            kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA, verbose=False,
+            kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA, verbose=False, no_agent=False,
         )
         print(format_human(fake_args, res, DEFAULT_K1, False))
 
