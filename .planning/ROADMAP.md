@@ -163,7 +163,27 @@ Plans:
   3. Wszystkie 3 presety waluacji dają deterministyczne, dające się odróżnić wyniki KPI na tym samym seedzie + strategii
   4. Nagłówek wygenerowanego raportu MD zawiera kompletną konfigurację środowiska: `nU, T, κ, α, K0, K1, φ, ρ, seed` w czytelnej tabeli
 
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+**Wave 0** *(scaffolding)*
+
+- [ ] 05-00-PLAN.md — tests/test_env.py 7-class stub + scripts/verify_phase5.sh skeleton (locks taxonomy for Waves 1-4)
+
+**Wave 1** *(blocked on Wave 0 completion)*
+
+- [ ] 05-01-PLAN.md — ENV-01: --phi/--rho argparse type= converters (Polish errors) + main.py threading + TestPhiRhoParsing/Flow
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 05-02-PLAN.md — ENV-02: --K0/--valuation flags + valuation/sph_stp preset dispatch + simulator threading + TestValuationDispatch/Presets/Distinguishability (SC-3)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 05-03-PLAN.md — ENV-03: format_config_header() MD table + format_human prepend + JSON env block extension + REPL fake_args fix (Pitfall 2) + TestConfigHeader/HumanHeader
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 05-04-PLAN.md — regression_check.py SKIP_KEYS extension + scripts/verify_phase5.sh phase exit gate (4 ROADMAP SCs + regression + tests + REPL Pitfall 2)
 
 ### Phase 6: Report + plots generator
 
@@ -209,6 +229,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Interactive CLI shell | 4/4 | Complete   | 2026-05-25 |
 | 3. Custom strategy loader | 4/4 | Complete   | 2026-05-27 |
 | 4. Rational Agent veto layer | 7/7 | Complete   | 2026-05-27 |
-| 5. Configurable environment | 0/TBD | Not started | - |
+| 5. Configurable environment | 0/5 | Not started | - |
 | 6. Report + plots generator | 0/TBD | Not started | - |
 | 7. Batch runner + aggregation | 0/TBD | Not started | - |
