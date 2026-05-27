@@ -32,11 +32,20 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generate_baseline import INVOCATIONS, PROJECT_ROOT, FIXTURES_DIR, MONOLITH  # noqa: E402
 
+# Phase 4 D-67 (Strategia B): zamiast regenerować baseline_v1/*.json fixtures lub dodawać --no-agent
+# do INVOCATIONS, ignorujemy 3 nowe klucze (wprowadzone w Phase 4 jako agent veto layer) przy
+# compare z fixtures. To zachowuje semantykę "fixtures są oracle dla istniejących pól metrics"
+# bez konieczności regeneracji ani touch'owania generate_baseline.py.
+# Phase 4 D-67: trzy nowe klucze w metrics są ignorowane przy compare z baseline_v1 fixtures —
+# fixtures są oracle dla v1.0 zachowania i nie zawierają tych pól. Pola obecne tylko w actual output.
+SKIP_KEYS = ('veto_per_phase', 'n_vetoed_total', 'agent_enabled')
+
 
 def deep_diff(expected, actual, path=''):
     """Rekurencyjnie porównuje dwa obiekty (dict/list/scalar).
     Zwraca listę stringów opisujących różnice. Pusta lista = identyczne.
-    Porównuje EXACT EQUALITY — bez tolerance dla floatów."""
+    Porównuje EXACT EQUALITY — bez tolerance dla floatów.
+    Phase 4 D-67 (Strategia B): klucze z SKIP_KEYS są ignorowane w każdym dict."""
     diffs = []
 
     # Type mismatch
@@ -48,8 +57,8 @@ def deep_diff(expected, actual, path=''):
         return diffs
 
     if isinstance(expected, dict):
-        ek = set(expected.keys())
-        ak = set(actual.keys())
+        ek = set(expected.keys()) - set(SKIP_KEYS)
+        ak = set(actual.keys()) - set(SKIP_KEYS)
         for k in sorted(ek - ak):
             diffs.append(f"{path}.{k}: KEY MISSING w actual (expected={expected[k]!r})")
         for k in sorted(ak - ek):
@@ -77,9 +86,12 @@ def deep_diff(expected, actual, path=''):
 
 
 def run_invocation(args):
-    """Uruchamia sph_sim.py z podanymi flagami + '--seed 42 --json'.
+    """Uruchamia sph_sim.py z podanymi flagami + '--no-agent --seed 42 --json'.
+    --no-agent gwarantuje że istniejące metryki są bit-identyczne z baseline_v1 fixtures
+    (Phase 4 D-67 Strategia B: INVOCATIONS w generate_baseline.py pozostają bez zmian,
+    regression_check dodaje --no-agent lokalnie aby agent default-on nie zmieniał metryk).
     Zwraca (dict, None) przy sukcesie lub (None, error_str) przy błędzie."""
-    full_args = [sys.executable, str(MONOLITH), *args, '--seed', '42', '--json']
+    full_args = [sys.executable, str(MONOLITH), *args, '--no-agent', '--seed', '42', '--json']
     try:
         result = subprocess.run(
             full_args,
