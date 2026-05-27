@@ -1,4 +1,5 @@
 # Formatowanie wyniku symulacji — human-readable + JSON.
+# Rozszerzono o sekcję VETO (D-66), format_compare (D-62), format_json extension (D-67).
 import json
 
 
@@ -8,12 +9,95 @@ def format_json(args, res, params, K1):
         'strategy_params': params,
         'env': {'nU': args.nU, 'nSUS': args.nSUS, 'K1': K1,
                 'T': args.T, 'kappa': args.kappa, 'alpha': args.alpha},
-        'metrics': {k: v for k, v in res.items() if k not in ('history', 'devices')},
     }
+    if 'comparison' in res:
+        # Tryb --compare-agent: zastąp 'metrics' blokiem 'comparison' (D-67).
+        out['comparison'] = res['comparison']
+    else:
+        # Standardowy tryb: dodaj agent_enabled do metrics (D-67 backwards compat).
+        out['metrics'] = {
+            **{k: v for k, v in res.items() if k not in ('history', 'devices')},
+            'agent_enabled': not args.no_agent,
+        }
     return json.dumps(out, indent=2)
 
 
+def format_compare(args, comp, K1):
+    """Render tabeli 5×3 delta KPI dla trybu --compare-agent (D-62).
+
+    Argumenty:
+        args: argparse.Namespace z parametrami symulacji.
+        comp: dict z kluczami with_agent, without_agent, delta, agent_helps.
+        K1: próg waluacji konsumentów.
+
+    Zwraca string z tabelą ASCII 5 KPI × 3 kolumny + werdykt agent_helps.
+    """
+    with_ = comp['with_agent']
+    without_ = comp['without_agent']
+    delta = comp['delta']
+
+    kpis = [
+        ('avg_val_last100',    '{:>12.2f}'),
+        ('cum_val_total',      '{:>12.1f}'),
+        ('avg_net_profit',     '{:>12.4f}'),
+        ('delivery_ratio',     '{:>12.2%}'),
+        ('avg_providers_l100', '{:>12.2f}'),
+    ]
+
+    lines = []
+    sep62 = '─' * 62
+    sep_wide = '─' * 66
+
+    lines.append(f"\n{'='*66}")
+    lines.append(f"  PORÓWNANIE STRATEGII z/bez RationalAgent")
+    lines.append(f"  Strategia: {args.strategy.upper()} | K1={K1}")
+    lines.append(f"{'='*66}")
+    lines.append(f"  {'KPI':<24}  {'with-agent':>12}  {'bez agenta':>12}  {'Δ (with-no)':>12}")
+    lines.append(f"  {sep_wide}")
+    for kpi, fmt in kpis:
+        w_val = with_.get(kpi, 0)
+        wo_val = without_.get(kpi, 0)
+        d_val = delta.get(kpi, 0)
+        # Formatowanie wartości
+        if kpi == 'delivery_ratio':
+            w_str = f"{w_val:>12.2%}"
+            wo_str = f"{wo_val:>12.2%}"
+            sign = '+' if d_val >= 0 else ''
+            d_str = f"{sign}{d_val:.2%}"
+            d_str = f"{d_str:>12}"
+        else:
+            fmt_num = fmt
+            w_str = fmt_num.format(w_val)
+            wo_str = fmt_num.format(wo_val)
+            sign = '+' if d_val >= 0 else ''
+            # Użyj podobnego formatu dla delty
+            if 'f' in fmt:
+                precision = fmt.split('.')[-1].replace('f', '')
+                try:
+                    prec = int(precision)
+                    d_raw = f"{sign}{d_val:.{prec}f}"
+                except ValueError:
+                    d_raw = f"{sign}{d_val:.2f}"
+            else:
+                d_raw = f"{sign}{d_val:.2f}"
+            d_str = f"{d_raw:>12}"
+        lines.append(f"  {kpi:<24}{w_str}{wo_str}{d_str}")
+    lines.append(f"  {sep_wide}")
+    n_vetoed = with_.get('n_vetoed_total', 0)
+    verdict = '✓ TAK' if comp['agent_helps'] else '✗ NIE'
+    lines.append(
+        f"  Veto'wano: {n_vetoed} COMMIT-ów; with-agent bije without-agent: {verdict}"
+    )
+    lines.append(f"{'='*66}")
+    lines.append("")
+    return "\n".join(lines)
+
+
 def format_human(args, res, K1, verbose):
+    # Comparison branch (D-62) — early return dla --compare-agent.
+    if 'comparison' in res:
+        return format_compare(args, res['comparison'], K1)
+
     lines = []
     sep = '─' * 62
     lines.append(f"\n{'='*62}")
@@ -52,6 +136,27 @@ def format_human(args, res, K1, verbose):
         lines.append(f"  {sep}")
         verdict = "TAK — wszystkie fazy" if all_ic else "NIE — nie wszystkie fazy"
         lines.append(f"  Zgodność motywacyjna: {verdict}")
+
+    # VETO per-phase summary (Phase 4 D-66) — po sekcji IC, przed verbose block.
+    veto_pp = res.get('veto_per_phase', {})
+    n_vetoed = res.get('n_vetoed_total', 0)
+    if n_vetoed > 0:
+        lines.append(f"\n  VETO przez RationalAgent — rekomendacje COMMIT odrzucone per faza:")
+        lines.append(f"  {sep}")
+        lines.append(f"  {'Faza':>6}  {'COMMIT zgłoszone':>18}  {'VETO':>8}  {'% zaweto':>10}")
+        lines.append(f"  {sep}")
+        ic_ref = res.get('ic_per_phase', {})
+        total_committed = 0
+        for ph in sorted(set(list(veto_pp.keys()) + list(ic_ref.keys()))):
+            commits = ic_ref.get(ph, {}).get('commits', 0)
+            vetos = veto_pp.get(ph, 0)
+            total = commits + vetos
+            pct = (vetos / total * 100) if total > 0 else 0
+            lines.append(f"  {ph:>6}  {total:>18}  {vetos:>8}  {pct:>9.1f}%")
+            total_committed += total
+        lines.append(f"  {sep}")
+        pct_total = (n_vetoed / max(total_committed, 1)) * 100
+        lines.append(f"  Łącznie zaweto'wano: {n_vetoed} COMMIT-ów z {total_committed} zgłoszonych ({pct_total:.1f}%).")
 
     if verbose:
         lines.append(f"\n  Próbkowanie waluacji (co 100 cykli):")
