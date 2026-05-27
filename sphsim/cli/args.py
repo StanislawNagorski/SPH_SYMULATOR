@@ -26,7 +26,7 @@ DOSTĘPNE STRATEGIE:
 """
 import argparse
 from sphsim.strategies import STRATEGIES, BUILTIN_STRATEGIES
-from sphsim.config import DEFAULT_NU, DEFAULT_NSUS, DEFAULT_K1, DEFAULT_T, DEFAULT_KAPPA, DEFAULT_ALPHA, DEFAULT_PHI, DEFAULT_RHO
+from sphsim.config import DEFAULT_NU, DEFAULT_NSUS, DEFAULT_K0, DEFAULT_K1, DEFAULT_T, DEFAULT_KAPPA, DEFAULT_ALPHA, DEFAULT_PHI, DEFAULT_RHO
 
 
 def _parse_phi_list(s: str) -> list:
@@ -97,12 +97,15 @@ def parse_args():
     p.add_argument('--nU',   type=int,   default=DEFAULT_NU,    help=f'Liczba urządzeń (def {DEFAULT_NU})')
     p.add_argument('--nSUS', type=int,   default=DEFAULT_NSUS,  help=f'Pojemność SUS (def {DEFAULT_NSUS})')
     p.add_argument('--K1',   type=float, default=DEFAULT_K1,    help=f'Górna granica waluacji (def {DEFAULT_K1})')
+    p.add_argument('--K0',   type=float, default=DEFAULT_K0,    help=f'Dolny próg waluacji K0 (def {DEFAULT_K0})')
     p.add_argument('--phi',  type=_parse_phi_list, default=DEFAULT_PHI,
                    metavar='p1,..,p5',
                    help='Profile awarii φ (5 liczb w [0,1], def: 0.1,0.2,0.3,0.4,1.0)')
     p.add_argument('--rho',  type=_parse_rho_list, default=DEFAULT_RHO,
                    metavar='r1,..,r5',
                    help='Koszty naprawy ρ (5 liczb ≥ 0, def: 0.5,0.5,0.7,1.5,3.0)')
+    p.add_argument('--valuation', choices=['window', 'step', 'linear'], default='window',
+                   help='Preset funkcji waluacji g(u): window (v1.0 default) | step | linear')
     p.add_argument('--T',    type=int,   default=DEFAULT_T,     help=f'Liczba cykli (def {DEFAULT_T})')
     p.add_argument('--kappa',type=float, default=DEFAULT_KAPPA, help=f'Koszt dostarczenia (def {DEFAULT_KAPPA})')
     p.add_argument('--alpha',type=float, default=DEFAULT_ALPHA, help=f'Wykładnik h(i)=i^alpha (def {DEFAULT_ALPHA})')
