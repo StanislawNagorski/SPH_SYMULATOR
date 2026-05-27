@@ -20,8 +20,8 @@
 - [ ] **STRAT-01**: Użytkownik może wpisać `/strategies` aby zobaczyć listę 5 wbudowanych strategii z krótkim opisem
 - [ ] **STRAT-02**: Użytkownik może wpisać `/strategy <nazwa>` aby zobaczyć szczegóły konkretnej strategii (parametry, sygnatura, baseline KPI)
 - [x] **STRAT-03**: Użytkownik może załadować custom strategię z pliku `.py` komendą `/custom <ścieżka>` lub flagą `--custom <ścieżka>`
-- [ ] **STRAT-04**: Loader waliduje że plik zawiera funkcję o wymaganej sygnaturze i jasno komunikuje błędy (brak funkcji, zła sygnatura, exception)
-- [ ] **STRAT-05**: Projekt zawiera przykładowy szablon `examples/custom_strategy_template.py` z komentarzami po polsku
+- [x] **STRAT-04**: Loader waliduje że plik zawiera funkcję o wymaganej sygnaturze i jasno komunikuje błędy (brak funkcji, zła sygnatura, exception)
+- [x] **STRAT-05**: Projekt zawiera przykładowy szablon `examples/custom_strategy_template.py` z komentarzami po polsku
 
 ### AGENT — rational agent veto
 
@@ -97,8 +97,8 @@
 | STRAT-01 | Phase 2 — Interactive CLI shell | Pending |
 | STRAT-02 | Phase 2 — Interactive CLI shell | Pending |
 | STRAT-03 | Phase 3 — Custom strategy loader | Complete |
-| STRAT-04 | Phase 3 — Custom strategy loader | Pending |
-| STRAT-05 | Phase 3 — Custom strategy loader | Pending |
+| STRAT-04 | Phase 3 — Custom strategy loader | Complete |
+| STRAT-05 | Phase 3 — Custom strategy loader | Complete |
 | AGENT-01 | Phase 4 — Rational Agent veto layer | Pending |
 | AGENT-02 | Phase 4 — Rational Agent veto layer | Pending |
 | AGENT-03 | Phase 4 — Rational Agent veto layer | Pending |

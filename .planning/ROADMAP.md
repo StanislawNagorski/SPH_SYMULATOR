@@ -19,7 +19,7 @@ Note: v1.0 nie był śledzony w GSD — istnieje jako "Validated" w PROJECT.md (
 
 - [x] **Phase 1: Refactoring foundation** - Split `sph_sim.py` into package (`strategies/`, `agent/`, `report/`, `cli/`) preserving v1.0 CLI behavior (completed 2026-05-25)
 - [x] **Phase 2: Interactive CLI shell** - REPL z `/help`, `/exit`, `/strategies`, `/strategy <nazwa>` (completed 2026-05-25)
-- [ ] **Phase 3: Custom strategy loader** - `importlib`-based loader plików `.py` + walidacja + szablon przykładowy
+- [x] **Phase 3: Custom strategy loader** - `importlib`-based loader plików `.py` + walidacja + szablon przykładowy (completed 2026-05-27)
 - [ ] **Phase 4: Rational Agent veto layer** - Wrapper weto'ujący COMMIT przy `E[zysk] < 0` + tryb porównawczy
 - [ ] **Phase 5: Configurable environment** - Override `φ/ρ`, presety waluacji, serializacja konfiguracji do raportu
 - [ ] **Phase 6: Report + plots generator** - Raport MD + 2 wykresy PNG (matplotlib) generowane zawsze
@@ -112,7 +112,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 03-04-PLAN.md — examples/custom_strategy_template.py (D-51 STRAT-05) + scripts/verify_phase3.sh phase exit gate (5 ROADMAP SCs + regression + invariant)
+- [x] 03-04-PLAN.md — examples/custom_strategy_template.py (D-51 STRAT-05) + scripts/verify_phase3.sh phase exit gate (5 ROADMAP SCs + regression + invariant)
 
 ### Phase 4: Rational Agent veto layer
 
@@ -185,7 +185,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Refactoring foundation | 5/5 | Complete   | 2026-05-25 |
 | 2. Interactive CLI shell | 4/4 | Complete   | 2026-05-25 |
-| 3. Custom strategy loader | 3/4 | In Progress|  |
+| 3. Custom strategy loader | 4/4 | Complete   | 2026-05-27 |
 | 4. Rational Agent veto layer | 0/TBD | Not started | - |
 | 5. Configurable environment | 0/TBD | Not started | - |
 | 6. Report + plots generator | 0/TBD | Not started | - |
