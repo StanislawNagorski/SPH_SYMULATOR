@@ -368,9 +368,75 @@ class TestTutorialReports(unittest.TestCase):
         if self._orig_no_report is not None:
             os.environ['SPHSIM_NO_REPORT'] = self._orig_no_report
 
-    @unittest.skip("Wave 2 — plan 08-04 wires _tutorial_state into do_run")
     def test_tutorial_reports_go_to_dedicated_dir(self):
-        self.fail("not yet implemented — see skip reason")
+        """TUT-06 end-to-end: `tutorial` → `run naive zeta=0.75` → report w `./reports/tutorial-<ts>/step-1-baseline/`."""
+        r = subprocess.run(
+            [sys.executable, os.path.join(_PROJECT_ROOT, 'sph_sim.py'), '--interactive'],
+            input='tutorial\nrun naive zeta=0.75\nexit\nexit\n',
+            capture_output=True,
+            text=True,
+            timeout=180,
+            cwd=self._tmpdir,
+            env={**os.environ, 'SPHSIM_NO_REPORT': ''},
+        )
+        self.assertEqual(r.returncode, 0,
+                         msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
+        # ./reports/tutorial-<ts>/step-1-baseline/ exists with required artifacts.
+        tutorial_dirs = list(Path(self._tmpdir, 'reports').glob('tutorial-*'))
+        self.assertEqual(len(tutorial_dirs), 1,
+                         msg=f'expected exactly 1 tutorial-* dir, got: {tutorial_dirs}')
+        step1_dir = tutorial_dirs[0] / 'step-1-baseline'
+        self.assertTrue(step1_dir.exists(),
+                        msg=f'step-1-baseline missing under {tutorial_dirs[0]}')
+        self.assertTrue((step1_dir / 'report.md').exists(),
+                        msg='report.md missing in tutorial step-1-baseline')
+        self.assertTrue((step1_dir / 'decision_distribution.png').exists(),
+                        msg='decision_distribution.png missing in tutorial step-1-baseline')
+        self.assertTrue((step1_dir / 'kpi_timeseries.png').exists(),
+                        msg='kpi_timeseries.png missing in tutorial step-1-baseline')
+
+    def test_non_tutorial_report_unchanged(self):
+        """TUT-06 backwards-compat: `run naive` outside tutorial → `./reports/<ts>/` (no tutorial- prefix)."""
+        r = subprocess.run(
+            [sys.executable, os.path.join(_PROJECT_ROOT, 'sph_sim.py'), '--interactive'],
+            input='run naive zeta=0.75\nexit\n',
+            capture_output=True,
+            text=True,
+            timeout=180,
+            cwd=self._tmpdir,
+            env={**os.environ, 'SPHSIM_NO_REPORT': ''},
+        )
+        self.assertEqual(r.returncode, 0,
+                         msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
+        # ./reports/<ts>/ exists; NO tutorial-* dir created.
+        tutorial_dirs = list(Path(self._tmpdir, 'reports').glob('tutorial-*'))
+        self.assertEqual(tutorial_dirs, [],
+                         msg=f'tutorial-* dir leaked in non-tutorial run: {tutorial_dirs}')
+        all_dirs = [p for p in Path(self._tmpdir, 'reports').iterdir() if p.is_dir()]
+        self.assertEqual(len(all_dirs), 1,
+                         msg=f'expected exactly 1 ./reports/<ts>/ dir, got: {all_dirs}')
+        ts_dir = all_dirs[0]
+        # Name should be a timestamp (YYYYMMDD-HHMMSS), not tutorial- prefix.
+        self.assertRegex(ts_dir.name, r'^\d{8}-\d{6}(-\d+)?$',
+                         msg=f'non-tutorial dir name should be timestamp: {ts_dir.name}')
+
+    def test_tutorial_step_verification_advances(self):
+        """TUT-06 + Task 2 GREEN: successful step 1 verification fires `✓ zaliczone — krok 1/8` and auto-advances to step 2."""
+        r = subprocess.run(
+            [sys.executable, os.path.join(_PROJECT_ROOT, 'sph_sim.py'), '--interactive'],
+            input='tutorial\nrun naive zeta=0.75\nexit\nexit\n',
+            capture_output=True,
+            text=True,
+            timeout=180,
+            cwd=self._tmpdir,
+            env={**os.environ, 'SPHSIM_NO_REPORT': ''},
+        )
+        self.assertEqual(r.returncode, 0,
+                         msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
+        self.assertIn('✓ zaliczone — krok 1/8', r.stdout,
+                      msg=f'step 1 verification not fired: {r.stdout[-2000:]}')
+        self.assertIn('[krok 2/8', r.stdout,
+                      msg=f'auto-advance to step 2 not visible: {r.stdout[-2000:]}')
 
     # ── D-10 unit tests (plan 08-01) ───────────────────────────────────────
 
