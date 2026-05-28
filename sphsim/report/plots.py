@@ -117,3 +117,57 @@ def plot_kpi_timeseries(history, T, path):
         fig.savefig(path)
     finally:
         plt.close(fig)
+
+
+def plot_batch_aggregate(per_seed_kpis, path):
+    """PLOT-04: 5 subplotów (1×5 grid) z box-plotami dla każdego z 5 KPI.
+
+    Args:
+        per_seed_kpis: list[dict[str, float]] — N dictów z 5 kluczami z KPIS
+                       (canonical order: avg_val_last100, cum_val_total,
+                        avg_net_profit, delivery_ratio, avg_providers_l100).
+        path: pathlib.Path | str — gdzie zapisać PNG.
+
+    Side effects:
+        Zapisuje PNG pod `path`. Zamyka figurę w finally (Pitfall 1 — matplotlib FD leak).
+        Defensive: gdy per_seed_kpis pusta, funkcja zwraca cicho bez zapisu.
+
+    Notes:
+        5 subplotów (NIE jeden grouped boxplot) bo 5 KPI mają drastycznie różne skale
+        (avg_val_last100≈92, cum_val_total≈92000, delivery_ratio≈0.79). Jedna Y-oś
+        kompresowałaby delivery_ratio do niewidocznej linii. RESEARCH §F.13 — verified.
+
+        Wywołanie `plt.subplots(1, 5, figsize=(15, 4), dpi=120)` jest load-bearing
+        (Warning #6 contract): TestBatchPlots.test_5_panels mockuje plt.subplots
+        i assertuje (nrows, ncols) == (1, 5).
+    """
+    if not per_seed_kpis:
+        return
+
+    KPI_LABELS = [
+        ('avg_val_last100',     'avg_val_last100\n(waluacja, last 100)'),
+        ('cum_val_total',       'cum_val_total\n(suma waluacji)'),
+        ('avg_net_profit',      'avg_net_profit\n(zysk netto / urządzenie)'),
+        ('delivery_ratio',      'delivery_ratio\n(% udanych)'),
+        ('avg_providers_l100',  'avg_providers_l100\n(śr. dostawcy, last 100)'),
+    ]
+
+    fig, axes = plt.subplots(1, 5, figsize=(15, 4), dpi=120)
+    try:
+        for ax, (kpi_key, label) in zip(axes, KPI_LABELS):
+            values = [d[kpi_key] for d in per_seed_kpis]
+            ax.boxplot(values, vert=True, patch_artist=True,
+                       boxprops=dict(facecolor='#90CAF9'),
+                       medianprops=dict(color='#0D47A1', linewidth=2))
+            ax.set_title(label, fontsize=10)
+            ax.set_xticks([])
+            ax.grid(axis='y', linestyle='--', alpha=0.4)
+            # Y-axis percent formatter dla delivery_ratio (matplotlib FuncFormatter
+            # wymaga 2-arg lambda: (value, pos)).
+            if kpi_key == 'delivery_ratio':
+                ax.yaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.0%}'))
+        fig.suptitle(f'Box-ploty 5 KPI (N={len(per_seed_kpis)} seedów)', fontsize=12)
+        fig.tight_layout()
+        fig.savefig(path)
+    finally:
+        plt.close(fig)
