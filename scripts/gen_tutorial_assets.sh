@@ -45,7 +45,7 @@ cp "${LATEST}kpi_timeseries.png"        docs/assets/kpi_timeseries_naive.png
 # DO NOT pass --seed 42 here (it would seed the FIRST run to 42, not what we want).
 rm -rf ./reports/tutorial-* ./reports/batch_* ./reports/[0-9]*
 SPHSIM_NO_REPORT='' $PY sph_sim.py --strategy naive --zeta 0.75 --batch --seeds 5 --no-agent > /tmp/p8_gen_batch.log 2>&1
-LATEST_B=$(ls -d ./reports/batch_*/ 2>/dev/null | head -1)
+LATEST_B=$(ls -d ./reports/batch_*/ 2>/dev/null | tail -1)
 if [ -z "$LATEST_B" ]; then
     echo "FATAL: batch run did not produce a batch_*/ directory" >&2
     cat /tmp/p8_gen_batch.log >&2
