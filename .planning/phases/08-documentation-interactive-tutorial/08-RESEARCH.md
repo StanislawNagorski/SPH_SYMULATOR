@@ -950,22 +950,25 @@ def write_report(args, res, params, K1, *, mode='single', report_dir_override=No
 
 ---
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Exact `exit` keyword collision (A1 above)**
    - What we know: `precmd` can intercept `exit` before `do_exit` fires; "exit tutorial" behavior is defined (D-05).
    - What's unclear: Whether using `exit` as BOTH "quit REPL" and "quit tutorial" is confusing to users.
    - Recommendation: Keep `exit` for tutorial-escape (matches D-05 literal text). Document clearly in the tutorial opening banner that `exit` leaves the tutorial but NOT the session. If planner disagrees, use `quit` for tutorial-escape.
+   - **RESOLVED:** `exit` keeps D-05 literal text; precmd intercepts the word and short-circuits BEFORE do_exit fires (Pitfall 1 mitigation). Disambiguation banner copy lives in `do_tutorial` (Plan 04 Change E): "`exit` wraca do REPL (stan zachowany), nie kończy sesji. Wpisz `exit` ponownie żeby zakończyć REPL."
 
 2. **Step 6 (env override) verification complexity**
    - What we know: ENV step requires user to run with `--phi`, `--rho`, or `--valuation` override. But the REPL `do_run` uses `DEFAULT_*` env params hardcoded (fake_args in do_run doesn't accept env overrides yet — Phase 5 added these for CLI but REPL `do_run` uses DEFAULT_* only).
    - What's unclear: Can the user actually do an env override in REPL `run` command? Checking repl.py line 213-218: `do_run` builds sim with `DEFAULT_PHI`, `DEFAULT_RHO`, hardcoded `K0=DEFAULT_K0`, `valuation='window'`. No env override via REPL `run` k=v args.
    - Recommendation: Change step 6 to demonstrate env override via ONE-SHOT CLI (instruct user to open a new terminal OR reframe step 6 as "try in CLI mode — this is what you'd run: `python sph_sim.py --strategy naive --valuation step`" as an informational step with `skip` expected). Or simplify step 6 to just show the `--phi`/`--rho` syntax without requiring REPL execution. **Planner must decide.**
+   - **RESOLVED:** Step 6 is a **soft-pass informational step**. The step description displays the CLI command the user could run later (e.g. `python sph_sim.py --strategy incentive --phi 0.5 --rho 0.3 --valuation step --seed 42 --no-agent`) but does NOT require executing it in a second terminal. `check_step(6, line, ...)` returns True for any non-empty line (same behavior as step 7). No `snapshot_reports_dirs`/`new_reports_dirs` machinery is added to `TutorialFlow` — this keeps tutorial.py pure (NO I/O) and the step verifiable in CI without TTY multiplexing.
 
 3. **Tutorial step 7 (report inspection) — show or skip?**
    - What we know: Reports are always created automatically by prior steps. Step 7 can just point the user at the latest report dir and ask them to open it.
    - What's unclear: Is this a "real" step or just a narrative note?
    - Recommendation: Make step 7 a soft step — show the report path, instruct user to `cat reports/<latest>/report.md | head -40`, accept ANY command as "done" (no strict verification). Alternatively, fold this into step 5 (compare) since compare already shows the report banner on stderr.
+   - **RESOLVED:** Step 7 is a **soft-pass** display step. `check_step(7, line, ...)` returns True for ANY non-empty line. The step description points the user at `cat reports/<najnowszy>/report.md | head -40` (run in a second terminal) and accepts `skip` or any input to advance.
 
 ---
 
