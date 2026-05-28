@@ -209,6 +209,71 @@ class TestTutorialReports(unittest.TestCase):
         finally:
             del os.environ['SPHSIM_NO_REPORT']
 
+    # ── D-10 write_batch_report unit tests (plan 08-01, Task 2) ────────────
+
+    def test_batch_report_dir_override_creates_path_and_writes_files(self):
+        """D-10 + Pattern 6: write_batch_report(..., report_dir_override=Path('reports/tutorial-X/step-8-batch'))
+        returns that path and writes report.md + batch_aggregate.png there, bypassing ./reports/batch_<ts>/.
+        """
+        from sphsim.report import write_batch_report
+        from sphsim.batch.stats import aggregate_kpis
+
+        per_seed = _make_per_seed_results(3)
+        aggregate = aggregate_kpis(per_seed)
+        seeds = [1, 2, 3]
+        args = _make_args(batch=True, seeds=seeds, expected_P=100.0,
+                          json=False, verbose=False)
+        override = Path('reports/tutorial-test/step-8-batch')
+
+        result = write_batch_report(args, per_seed, aggregate, {'zeta': 0.75},
+                                    120.0, seeds, report_dir_override=override)
+        self.assertIsNotNone(result,
+                             msg="write_batch_report zwrócił None — env-var leak?")
+        self.assertEqual(result, override,
+                         msg=f"write_batch_report nie zwrócił override path: {result} != {override}")
+        self.assertTrue(override.exists(), msg=f"override dir nie istnieje: {override}")
+        self.assertTrue((override / 'report.md').exists(),
+                        msg="report.md missing in batch override dir")
+        self.assertTrue((override / 'batch_aggregate.png').exists(),
+                        msg="batch_aggregate.png missing in batch override dir")
+        # Anti-regression: no ./reports/batch_<ts>/ created.
+        reports_root = Path('reports')
+        sibling_dirs = [p for p in reports_root.iterdir()
+                        if p.is_dir() and p.name.startswith('batch_')]
+        self.assertEqual(sibling_dirs, [],
+                         msg=f"default ./reports/batch_<ts>/ branch leaked: {sibling_dirs}")
+
+    def test_batch_report_dir_override_keyword_only(self):
+        """report_dir_override on write_batch_report MUST be keyword-only with None default."""
+        from sphsim.report import write_batch_report
+        sig = inspect.signature(write_batch_report)
+        self.assertIn('report_dir_override', sig.parameters,
+                      msg="write_batch_report signature missing report_dir_override kwarg")
+        self.assertEqual(sig.parameters['report_dir_override'].kind,
+                         inspect.Parameter.KEYWORD_ONLY,
+                         msg="report_dir_override is not keyword-only on write_batch_report")
+        self.assertIsNone(sig.parameters['report_dir_override'].default,
+                          msg="report_dir_override default is not None on write_batch_report")
+
+    def test_batch_sphsim_no_report_wins_over_override(self):
+        """Pitfall 4 (batch): SPHSIM_NO_REPORT=1 must fire BEFORE report_dir_override logic."""
+        from sphsim.report import write_batch_report
+        from sphsim.batch.stats import aggregate_kpis
+        per_seed = _make_per_seed_results(3)
+        aggregate = aggregate_kpis(per_seed)
+        os.environ['SPHSIM_NO_REPORT'] = '1'
+        try:
+            override = Path('tmp_batch_should_not_exist/step-X')
+            result = write_batch_report(_make_args(), per_seed, aggregate,
+                                        {'zeta': 0.5}, 120.0, [1, 2, 3],
+                                        report_dir_override=override)
+            self.assertIsNone(result,
+                              msg="env-var opt-out NIE wygrał nad batch override")
+            self.assertFalse(override.exists(),
+                             msg=f"batch override path utworzony mimo opt-out: {override}")
+        finally:
+            del os.environ['SPHSIM_NO_REPORT']
+
 
 if __name__ == '__main__':
     unittest.main()
