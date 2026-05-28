@@ -230,5 +230,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Custom strategy loader | 4/4 | Complete   | 2026-05-27 |
 | 4. Rational Agent veto layer | 7/7 | Complete   | 2026-05-27 |
 | 5. Configurable environment | 5/5 | Complete   | 2026-05-27 |
-| 6. Report + plots generator | 1/6 | In Progress|  |
+| 6. Report + plots generator | 2/6 | In Progress|  |
 | 7. Batch runner + aggregation | 0/TBD | Not started | - |
