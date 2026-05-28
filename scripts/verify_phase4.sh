@@ -162,9 +162,9 @@ check "Mutex: --interactive + --compare-agent → błąd 'nie działa'" \
 # ── 9. REPL 7 komend — Phase 4 dodaje compare ──
 echo ""
 echo "── 9. REPL 7 komend (Phase 4 dodaje compare) ──"
-check "REPL help zawiera 'compare <nazwa>'" \
+check "REPL help zawiera 'compare <strategia>' (Phase 7: Plan 07-05 BATCH-01 renamed nazwa→strategia for consistency with batch help line)" \
     "printf 'help\nexit\n' | $PY sph_sim.py --interactive 2>&1 | \
-     grep 'compare <nazwa>' > /dev/null"
+     grep 'compare <strategia>' > /dev/null"
 
 # ── 10. Custom strategy + agent integration (D-58, Phase 3 carry-forward) ──
 echo ""

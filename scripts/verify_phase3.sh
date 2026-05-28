@@ -152,8 +152,8 @@ echo ""
 echo "── 8. D-44: mutex enforcement (interactive | strategy | custom) ──"
 check "Mutex odrzuca --custom + --strategy jednocześnie" \
     "{ $PY sph_sim.py --custom foo.py --strategy naive 2>&1 || true; } | grep 'not allowed with argument' > /dev/null"
-check "Mutex required: brak żadnego trybu → błąd argparse" \
-    "{ $PY sph_sim.py 2>&1 || true; } | grep 'one of the arguments' > /dev/null"
+check "Mutex required: brak żadnego trybu → polski post-parse error (Phase 8: Plan 08-02 replaced argparse English fallback with Polish)" \
+    "{ $PY sph_sim.py 2>&1 || true; } | grep 'Musisz podać jeden z trybów' > /dev/null"
 
 # ── Summary ──
 echo ""
