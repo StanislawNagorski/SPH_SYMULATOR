@@ -258,9 +258,13 @@ def check_step(
     tokens = line.split()
 
     # Step 1 (baseline) — `run naive ...` AND avg_val_last100 >= 80.0.
+    # Phase 8 WR-05: pin 'naive' to the strategy positional (tokens[1])
+    # rather than membership-anywhere ('naive' in tokens). Consistent with
+    # step-3's tokens[1] in builtin_strategies pattern, and rejects
+    # adversarial lines like `run threshold foo=naive`.
     if step_n == 1:
         return (
-            len(tokens) >= 2 and tokens[0] == 'run' and 'naive' in tokens
+            len(tokens) >= 2 and tokens[0] == 'run' and tokens[1] == 'naive'
             and last_sim_result is not None
             and last_sim_result.get('avg_val_last100', 0) >= 80.0
         )
