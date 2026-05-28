@@ -22,7 +22,7 @@ Pokrywa 5 klas, każda jeden skip-placeholder (RED-W0):
 Stdlib only: unittest + subprocess + json + os + sys + tempfile + pathlib
 (zgodne z PROJECT.md constraint).
 """
-import argparse, json, os, subprocess, sys, unittest
+import argparse, json, os, re, shutil, subprocess, sys, unittest
 from pathlib import Path
 
 _PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
@@ -162,8 +162,62 @@ class TestArgsMutex(unittest.TestCase):
 class TestReplBatch(unittest.TestCase):
     """BATCH-01: REPL komenda 'batch <strategia> --seeds N|lista [k=v]' produkuje raport + polski error dla --seeds 0."""
 
-    def test_placeholder(self):
-        self.skipTest("Wave 4 — Plan 07-05 — SPHShell.do_batch w repl.py")
+    def setUp(self):
+        # Pre-clean reports dir — test isolation: ./reports/batch_* glob must reflect this test.
+        shutil.rmtree(PROJECT_ROOT / 'reports', ignore_errors=True)
+
+    def tearDown(self):
+        shutil.rmtree(PROJECT_ROOT / 'reports', ignore_errors=True)
+
+    def test_repl_batch_e2e(self):
+        """REPL 'batch naive --seeds 3 zeta=0.75' produces reports/batch_<ts>/{report.md, batch_aggregate.png} + stderr banner."""
+        # Allow report write — override the inherited SPHSIM_NO_REPORT=1 from tests/__init__.py
+        # by setting empty string (write_batch_report checks `== '1'`).
+        env = {**os.environ, 'SPHSIM_NO_REPORT': ''}
+        p = subprocess.run(
+            [sys.executable, 'sph_sim.py', '--interactive'],
+            cwd=_PROJECT_ROOT, capture_output=True, text=True,
+            input='batch naive --seeds 3 zeta=0.75\nexit\n',
+            env=env,
+        )
+        self.assertEqual(p.returncode, 0, msg=f'REPL failed: stderr={p.stderr[:400]}')
+        combined = p.stdout + p.stderr
+        # Banner on stderr (caller emits, Phase 6 contract).
+        self.assertIn('Raport batchowy zapisany do:', combined,
+                      msg=f'Brak banner stderr: {combined[:400]}')
+        # BATCH SUMMARY on stdout (format_batch_summary banner).
+        self.assertIn('BATCH SUMMARY', p.stdout,
+                      msg=f'Brak BATCH SUMMARY w stdout: {p.stdout[:400]}')
+
+        # Artifact check — reports/batch_<ts>/ directory with report.md + batch_aggregate.png
+        matches = sorted((PROJECT_ROOT / 'reports').glob('batch_*'))
+        self.assertGreaterEqual(len(matches), 1,
+                                msg=f'no batch_* dir found in {PROJECT_ROOT / "reports"}')
+        latest = matches[-1]
+        self.assertTrue((latest / 'report.md').exists(),
+                        msg=f'report.md not found in {latest}')
+        self.assertTrue((latest / 'batch_aggregate.png').exists(),
+                        msg=f'batch_aggregate.png not found in {latest}')
+
+    def test_repl_batch_invalid_seeds_no_crash(self):
+        """REPL 'batch naive --seeds 0' prints Polish 'dodatnie' error, NO Python traceback, returns to prompt cleanly."""
+        env = {**os.environ, 'SPHSIM_NO_REPORT': '1'}
+        p = subprocess.run(
+            [sys.executable, 'sph_sim.py', '--interactive'],
+            cwd=_PROJECT_ROOT, capture_output=True, text=True,
+            input='batch naive --seeds 0\nexit\n',
+            env=env,
+        )
+        # REPL must exit cleanly even after error in do_batch (Pitfall 2 — REPL never crashes).
+        self.assertEqual(p.returncode, 0,
+                         msg=f'REPL crashed: returncode={p.returncode}, stderr={p.stderr[:400]}')
+        # Polish error from _parse_seeds_list propagated via `print(str(e))` in do_batch.
+        self.assertIn('dodatnie', p.stdout,
+                      msg=f"Brak 'dodatnie' w stdout: {p.stdout[:400]}")
+        # NO Python traceback in stdout/stderr — REPL must NOT propagate exceptions to user.
+        combined = p.stdout + p.stderr
+        self.assertNotIn('Traceback', combined,
+                         msg=f'Python traceback leaked to user: {combined[:400]}')
 
 
 class TestDeterminism(unittest.TestCase):
@@ -191,8 +245,73 @@ class TestDeterminism(unittest.TestCase):
 class TestCliReplParity(unittest.TestCase):
     """BATCH-01: CLI '--batch --seeds 3' i REPL 'batch <name> --seeds 3' produkują identyczne tabele KPI (single source of truth dla seedów + aggregate)."""
 
-    def test_placeholder(self):
-        self.skipTest("Wave 4 — Plan 07-05 — REPL fake_args + run_batch reuse")
+    def setUp(self):
+        shutil.rmtree(PROJECT_ROOT / 'reports', ignore_errors=True)
+
+    def tearDown(self):
+        shutil.rmtree(PROJECT_ROOT / 'reports', ignore_errors=True)
+
+    def test_identical_per_seed_row_count(self):
+        """CLI `--batch --seeds 3` and REPL `batch naive --seeds 3` produce reports with same structural shape (3 per-seed rows + identical KPI header).
+
+        Caveat (per Plan 07-05 <interfaces> note): REPL `do_batch` has no_agent=False
+        (agent ON, mirror of do_compare/do_run), CLI invocation here uses --no-agent
+        (agent OFF). Strict byte-equality of report.md is therefore impossible without
+        a REPL --no-agent flag (v2 scope). This test asserts STRUCTURAL parity
+        (per-seed row count + KPI table header) which is enough to detect any major
+        regression like "REPL writes wrong seed count" or "REPL skips per-seed table".
+        """
+        # ── CLI half ──
+        cli = _run_sph(
+            '--strategy', 'naive', '--zeta', '0.75',
+            '--batch', '--seeds', '3', '--no-agent', '--seed', '42',
+            SPHSIM_NO_REPORT='',
+        )
+        self.assertEqual(cli.returncode, 0,
+                         msg=f'CLI failed: returncode={cli.returncode}, stderr={cli.stderr[:400]}')
+        cli_dirs = sorted((PROJECT_ROOT / 'reports').glob('batch_*'))
+        self.assertGreaterEqual(len(cli_dirs), 1,
+                                msg=f'CLI produced no batch_* dir; ls={list((PROJECT_ROOT / "reports").iterdir())}')
+        cli_md = (cli_dirs[-1] / 'report.md').read_text(encoding='utf-8')
+
+        # Pre-clean between halves to disambiguate which dir belongs to REPL.
+        shutil.rmtree(PROJECT_ROOT / 'reports', ignore_errors=True)
+
+        # ── REPL half ──
+        env = {**os.environ, 'SPHSIM_NO_REPORT': ''}
+        repl = subprocess.run(
+            [sys.executable, 'sph_sim.py', '--interactive'],
+            cwd=_PROJECT_ROOT, capture_output=True, text=True,
+            input='batch naive --seeds 3 zeta=0.75\nexit\n',
+            env=env,
+        )
+        self.assertEqual(repl.returncode, 0,
+                         msg=f'REPL failed: returncode={repl.returncode}, stderr={repl.stderr[:400]}')
+        repl_dirs = sorted((PROJECT_ROOT / 'reports').glob('batch_*'))
+        self.assertGreaterEqual(len(repl_dirs), 1,
+                                msg=f'REPL produced no batch_* dir; ls={list((PROJECT_ROOT / "reports").iterdir())}')
+        repl_md = (repl_dirs[-1] / 'report.md').read_text(encoding='utf-8')
+
+        # ── Parity assertions ──
+        # Per-seed row count — extract rows starting with `| <positive int> |` (the per-seed table).
+        # Pattern matches: '| 1 |', '| 5 |', '| 42 |' (positive integer in first col, must be at line start).
+        cli_rows = re.findall(r'^\| [1-9]\d* \|', cli_md, re.MULTILINE)
+        repl_rows = re.findall(r'^\| [1-9]\d* \|', repl_md, re.MULTILINE)
+        self.assertEqual(len(cli_rows), 3,
+                         msg=f'CLI per-seed rows ≠ 3 (got {len(cli_rows)}): {cli_rows}')
+        self.assertEqual(len(repl_rows), 3,
+                         msg=f'REPL per-seed rows ≠ 3 (got {len(repl_rows)}): {repl_rows}')
+
+        # KPI table header parity — both reports MUST contain the canonical per-seed header
+        # (single source of truth: same render_batch_report template).
+        self.assertIn('avg_val_last100', cli_md,
+                      msg='CLI report.md missing avg_val_last100 in per-seed table header')
+        self.assertIn('avg_val_last100', repl_md,
+                      msg='REPL report.md missing avg_val_last100 in per-seed table header')
+
+        # Strategy name parity — both reports must reference strategy `naive`.
+        self.assertIn('naive', cli_md, msg='CLI report.md missing strategy name')
+        self.assertIn('naive', repl_md, msg='REPL report.md missing strategy name')
 
 
 if __name__ == '__main__':
