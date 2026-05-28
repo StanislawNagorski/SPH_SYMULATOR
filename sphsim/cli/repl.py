@@ -68,7 +68,8 @@ class SPHShell(cmd.Cmd):
         print("  strategy <nazwa>                — Wyświetl szczegóły strategii (parametry, baseline KPI).")
         print("  custom <ścieżka> [k=v ...]      — Załaduj custom strategię z pliku .py.")
         print("  run <nazwa> [k=v ...]           — Uruchom symulację (built-in lub custom).")
-        print("  compare <nazwa> [k=v ...]       — Porównaj strategię z i bez RationalAgent (delta KPI).")
+        print("  compare <strategia> [k=v ...]   — Porównaj strategię z i bez RationalAgent (delta KPI).")
+        print("  batch <nazwa> --seeds N|lista [k=v ...] — Uruchom strategię na wielu seedach (agregat statystyczny).")
 
     # ---- exit (D-20, CLI-03) ----
     def do_exit(self, arg):
@@ -299,17 +300,108 @@ class SPHShell(cmd.Cmd):
         }
         # Phase 6 (Pitfall 6 defensive consistency): json=False, compare_agent=True (explicit
         # compare-mode marker dla markdown.py _render_strategy_params dispatch).
+        # Phase 7 (Pitfall 7 defensive consistency): expected_P=params.get(...) — choć compare
+        # nie używa go w fake_args (wrap inline), trzymamy w Namespace żeby Pitfall 7 audit
+        # invariant (PATTERNS §4) trzymał się jednolicie w obu trybach REPL'a.
         fake_args = argparse.Namespace(
             strategy=name, nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, T=DEFAULT_T,
             kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA, verbose=False, no_agent=False,
             phi=DEFAULT_PHI, rho=DEFAULT_RHO, K0=DEFAULT_K0, valuation='window',
             seed=42, json=False, compare_agent=True,
+            expected_P=params.get('expected_P', DEFAULT_K0),
         )
         # Phase 6 REPORT-03: side-effect raport porównawczy.
         report_dir = write_report(fake_args, res_combined, params, DEFAULT_K1, mode='compare')
         if report_dir:
             print(f'Raport porównawczy zapisany do: {report_dir}/report.md', file=sys.stderr)
         print(format_human(fake_args, res_combined, DEFAULT_K1, False))
+
+    # ---- batch <name> --seeds N|lista [k=v ...] (Phase 7 BATCH-01, RESEARCH §C.5) ----
+    def do_batch(self, arg):
+        """Uruchom strategię na wielu seedach: batch <nazwa> --seeds N|lista [param=wartość ...]"""
+        tokens = arg.split()
+        if not tokens:
+            # Mirror do_run/do_compare empty-arg style; jedna polska linia użycia.
+            print("Użycie: batch <nazwa> --seeds N|lista [param=wartość ...]. "
+                  "Np.: batch naive --seeds 10  |  batch naive --seeds 1,5,42 zeta=0.75")
+            return
+
+        # Separate `--seeds VALUE` from name + k=v tokens. While-loop pattern z RESEARCH §C.5
+        # — obsługuje dowolną kolejność tokenów (np. `naive --seeds 5 zeta=0.75` lub `--seeds 5 naive`).
+        seeds_value = None
+        other_tokens = []
+        i = 0
+        while i < len(tokens):
+            if tokens[i] == '--seeds' and i + 1 < len(tokens):
+                seeds_value = tokens[i + 1]
+                i += 2
+            else:
+                other_tokens.append(tokens[i])
+                i += 1
+
+        if seeds_value is None:
+            print("Komenda `batch` wymaga --seeds N lub --seeds lista (np. --seeds 1,5,42).")
+            return
+
+        # Reuse _parse_seeds_list — single source of truth z sphsim/cli/args.py (Plan 07-02).
+        # Deferred import: zero cold-start cost dla użytkowników, którzy nigdy nie wywołują batch.
+        # Pitfall 2 — REPL must NEVER crash; argparse.ArgumentTypeError catch jest krytyczny.
+        try:
+            from sphsim.cli.args import _parse_seeds_list
+            seeds_list = _parse_seeds_list(seeds_value)
+        except argparse.ArgumentTypeError as e:
+            print(str(e))
+            return
+
+        if not other_tokens:
+            print("Komenda `batch` wymaga nazwy strategii. Wpisz 'strategies' żeby zobaczyć dostępne.")
+            return
+        name, *kv_tokens = other_tokens
+
+        # Strategy validation (verbatim z do_compare:246-262 — D-31 styl).
+        if name not in STRATEGIES:
+            available = ', '.join(STRATEGIES.keys())
+            print(f"Strategia '{name}' nie istnieje. Dostępne: {available}.")
+            return
+
+        # D-50 dispatch namespace: built-in w sphsim.strategies.<name>,
+        # custom w sphsim.custom.<name> (D-46 private namespace z loadera).
+        ns = 'sphsim.strategies' if name in BUILTIN_STRATEGIES else 'sphsim.custom'
+        mod = importlib.import_module(f'{ns}.{name}')
+        meta = mod.STRATEGY_META
+        try:
+            params = parse_params_from_meta(kv_tokens, meta, name)
+        except LoaderError as e:
+            print(e.args[0])
+            return
+
+        # fake_args — ALL fields wymagane przez write_batch_report / render_batch_report /
+        # format_config_header / format_batch_summary / run_batch (PATTERNS §4 field audit).
+        # Pitfall 7 (D-54 propagation): expected_P z params.get fallback do DEFAULT_K0 — NIE
+        # hardcode'ujemy 100.0, żeby custom strategie deklarujące expected_P w meta propagowały.
+        fake_args = argparse.Namespace(
+            strategy=name, nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, T=DEFAULT_T,
+            kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA, verbose=False, no_agent=False,
+            phi=DEFAULT_PHI, rho=DEFAULT_RHO, K0=DEFAULT_K0, valuation='window',
+            seed=42, json=False, compare_agent=False,
+            # Phase 7 additions:
+            batch=True,
+            seeds=seeds_list,
+            expected_P=params.get('expected_P', DEFAULT_K0),
+        )
+
+        # Deferred imports — single source of truth z CLI path (main.py:93-101).
+        from sphsim.batch import run_batch
+        from sphsim.report import write_batch_report
+        from sphsim.cli.output import format_batch_summary
+
+        raw_strategy_fn = STRATEGIES[name]
+        per_seed_results, aggregate = run_batch(fake_args, raw_strategy_fn, params, DEFAULT_K1)
+        report_dir = write_batch_report(fake_args, per_seed_results, aggregate, params,
+                                        DEFAULT_K1, seeds_list)
+        if report_dir:
+            print(f'Raport batchowy zapisany do: {report_dir}/report.md', file=sys.stderr)
+        print(format_batch_summary(fake_args, aggregate, DEFAULT_K1))
 
     # ---- default — nieznana komenda (D-30) ----
     def default(self, line):
