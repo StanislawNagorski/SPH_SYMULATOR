@@ -203,16 +203,19 @@ class SPHShell(cmd.Cmd):
         """Wyświetl listę wbudowanych i custom strategii."""
         print("Dostępne strategie:")
         for name in STRATEGIES.keys():
-            # D-50 dispatch namespace: built-in żyją w sphsim.strategies.<name>,
-            # custom w sphsim.custom.<name> (D-46 private namespace z loadera).
-            if name in BUILTIN_STRATEGIES:
-                mod = importlib.import_module(f'sphsim.strategies.{name}')
-                description = mod.STRATEGY_META['description']
+            # Phase 8 WR-03: derive namespace from the registered fn's actual
+            # module rather than `name in BUILTIN_STRATEGIES`. This is robust
+            # to any future scenario where STRATEGIES[name] is a custom fn
+            # under a built-in name (shadow). The loader currently blocks
+            # such collisions at load time, but the dispatcher must NOT
+            # depend on that invariant — defense in depth.
+            mod = sys.modules[STRATEGIES[name].__module__]
+            description = mod.STRATEGY_META['description']
+            is_builtin = mod.__name__.startswith('sphsim.strategies.')
+            if is_builtin:
                 # Padding nazwy do 12 znaków, separator em-dash (D-29).
                 print(f"  {name:<12}— {description}")
             else:
-                mod = importlib.import_module(f'sphsim.custom.{name}')
-                description = mod.STRATEGY_META['description']
                 # D-50: suffix ` [custom]` po opisie (SC #4 ROADMAP).
                 print(f"  {name:<12}— {description} [custom]")
 
@@ -232,9 +235,11 @@ class SPHShell(cmd.Cmd):
             print(f"Strategia '{name}' nie istnieje. Dostępne: {available}.")
             return
 
-        # Valid name — załaduj metadane dynamicznie (D-50 dispatch namespace).
-        ns = 'sphsim.strategies' if name in BUILTIN_STRATEGIES else 'sphsim.custom'
-        mod = importlib.import_module(f'{ns}.{name}')
+        # Phase 8 WR-03: derive module from STRATEGIES[name].__module__ rather
+        # than `name in BUILTIN_STRATEGIES` — defense against custom-shadowing
+        # a built-in name (loader currently rejects collisions, but dispatcher
+        # must not rely on that invariant).
+        mod = sys.modules[STRATEGIES[name].__module__]
         meta = mod.STRATEGY_META
 
         # Description section
@@ -309,10 +314,11 @@ class SPHShell(cmd.Cmd):
             print(f"Strategia '{name}' nie istnieje. Dostępne: {available}.")
             return
 
-        # D-50 dispatch namespace: built-in w sphsim.strategies.<name>,
-        # custom w sphsim.custom.<name> (D-46 private namespace z loadera).
-        ns = 'sphsim.strategies' if name in BUILTIN_STRATEGIES else 'sphsim.custom'
-        mod = importlib.import_module(f'{ns}.{name}')
+        # Phase 8 WR-03: derive module from STRATEGIES[name].__module__ — the
+        # registered fn is ground truth. Prevents stale-meta dispatch if a
+        # custom strategy ever shadows a built-in (loader rejects today; the
+        # dispatcher should not depend on that).
+        mod = sys.modules[STRATEGIES[name].__module__]
         meta = mod.STRATEGY_META
 
         try:
@@ -383,10 +389,9 @@ class SPHShell(cmd.Cmd):
             print(f"Strategia '{name}' nie istnieje. Dostępne: {available}.")
             return
 
-        # D-50 dispatch namespace: built-in w sphsim.strategies.<name>,
-        # custom w sphsim.custom.<name> (D-46 private namespace z loadera).
-        ns = 'sphsim.strategies' if name in BUILTIN_STRATEGIES else 'sphsim.custom'
-        mod = importlib.import_module(f'{ns}.{name}')
+        # Phase 8 WR-03: derive module from STRATEGIES[name].__module__ — see
+        # do_run for rationale (defense-in-depth against custom shadow).
+        mod = sys.modules[STRATEGIES[name].__module__]
         meta = mod.STRATEGY_META
 
         try:
@@ -510,10 +515,9 @@ class SPHShell(cmd.Cmd):
             print(f"Strategia '{name}' nie istnieje. Dostępne: {available}.")
             return
 
-        # D-50 dispatch namespace: built-in w sphsim.strategies.<name>,
-        # custom w sphsim.custom.<name> (D-46 private namespace z loadera).
-        ns = 'sphsim.strategies' if name in BUILTIN_STRATEGIES else 'sphsim.custom'
-        mod = importlib.import_module(f'{ns}.{name}')
+        # Phase 8 WR-03: derive module from STRATEGIES[name].__module__ — see
+        # do_run for rationale (defense-in-depth against custom shadow).
+        mod = sys.modules[STRATEGIES[name].__module__]
         meta = mod.STRATEGY_META
         try:
             params = parse_params_from_meta(kv_tokens, meta, name)
