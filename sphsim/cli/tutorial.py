@@ -254,10 +254,70 @@ def check_step(
     Returns:
         True iff the step's verification criteria are satisfied.
     """
-    # Body implemented in Task 2 (separate TDD cycle). Stub-raise so any
-    # consumer that calls check_step before Task 2 lands fails loudly rather
-    # than silently returning a misleading bool.
-    raise NotImplementedError(
-        "check_step body is delivered in Plan 08-03 Task 2 — see RESEARCH "
-        "§Step Verification Map (lines 439-452)."
-    )
+    line = (line or '').strip()
+    tokens = line.split()
+
+    # Step 1 (baseline) — `run naive ...` AND avg_val_last100 >= 80.0.
+    if step_n == 1:
+        return (
+            len(tokens) >= 2 and tokens[0] == 'run' and 'naive' in tokens
+            and last_sim_result is not None
+            and last_sim_result.get('avg_val_last100', 0) >= 80.0
+        )
+
+    # Step 2 (strategies) — display-only; pass when the user types the listing
+    # command or asks for a single strategy. No simulator dependency.
+    if step_n == 2:
+        return line == 'strategies' or line.startswith('strategy ')
+
+    # Step 3 (run-strategy) — run + builtin name + simulator produced a result.
+    if step_n == 3:
+        return (
+            len(tokens) >= 2 and tokens[0] == 'run'
+            and tokens[1] in builtin_strategies
+            and last_sim_result is not None
+            and last_sim_result.get('avg_val_last100', None) is not None
+        )
+
+    # Step 4 (custom) — pass iff STRATEGIES now contains a non-builtin key.
+    # Shape check on `line` is intentionally skipped: postcmd has already
+    # mutated STRATEGIES via do_custom; checking the diff is more reliable
+    # than parsing the command line (the user may have reload-loaded an
+    # existing custom under a different alias).
+    if step_n == 4:
+        return bool(set(strategies_keys) - set(builtin_strategies))
+
+    # Step 5 (compare) — `compare ...` AND comparison.delta is truthy.
+    # Empty delta dict ({}) is intentionally False: it means do_compare ran
+    # but produced no real KPI diff (e.g. agent-only side errored).
+    if step_n == 5:
+        return bool(
+            tokens and tokens[0] == 'compare'
+            and last_sim_result is not None
+            and 'comparison' in last_sim_result
+            and last_sim_result['comparison'].get('delta')
+        )
+
+    # Step 6 (env) — Open Question #2 resolution: soft-pass informational step.
+    # The displayed command is for the user to try LATER in a separate shell;
+    # the REPL doesn't run it. Any non-empty line advances the tutorial.
+    if step_n == 6:
+        return bool(line)
+
+    # Step 7 (report) — Open Question #3 resolution: soft-pass display step.
+    # User is encouraged to `cat` the report in a second terminal; any input
+    # advances. Same shape as step 6.
+    if step_n == 7:
+        return bool(line)
+
+    # Step 8 (batch) — `batch ... --seeds ...` AND aggregate dict in result.
+    if step_n == 8:
+        return bool(
+            tokens and tokens[0] == 'batch' and '--seeds' in line
+            and last_sim_result is not None
+            and 'aggregate' in last_sim_result
+        )
+
+    # Unknown step number — defensive False (postcmd should never reach here
+    # because step is clamped to 1..total in repl.py, but explicit > implicit).
+    return False
