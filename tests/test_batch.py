@@ -169,8 +169,23 @@ class TestReplBatch(unittest.TestCase):
 class TestDeterminism(unittest.TestCase):
     """BATCH-01: ta sama lista seedów dwa razy → byte-identical per-seed KPI (random.seed(S) reset w SPHSimulator.__init__)."""
 
-    def test_placeholder(self):
-        self.skipTest("Wave 2 — Plan 07-03 — run_batch orchestrator deterministic loop")
+    def test_byte_identical(self):
+        """Two CLI invocations with identical --seeds → byte-identical stdout (BATCH-01 determinism contract)."""
+        r1 = _run_sph('--strategy', 'naive', '--zeta', '0.5', '--batch', '--seeds', '1,2,3', '--no-agent', '--seed', '42')
+        r2 = _run_sph('--strategy', 'naive', '--zeta', '0.5', '--batch', '--seeds', '1,2,3', '--no-agent', '--seed', '42')
+        self.assertEqual(r1.returncode, 0, msg=f'r1 failed: stderr={r1.stderr[:300]}')
+        self.assertEqual(r2.returncode, 0, msg=f'r2 failed: stderr={r2.stderr[:300]}')
+        self.assertEqual(r1.stdout, r2.stdout,
+                         msg=f"stdout diverged:\n--- r1 ---\n{r1.stdout}\n--- r2 ---\n{r2.stdout}")
+
+    def test_different_seeds_diverge(self):
+        """Two CLI invocations with DIFFERENT --seeds → different stdout (paranoia: ensure test_byte_identical isn't trivial)."""
+        r_a = _run_sph('--strategy', 'naive', '--zeta', '0.5', '--batch', '--seeds', '1,2,3', '--no-agent', '--seed', '42')
+        r_b = _run_sph('--strategy', 'naive', '--zeta', '0.5', '--batch', '--seeds', '4,5,6', '--no-agent', '--seed', '42')
+        self.assertEqual(r_a.returncode, 0, msg=f'r_a failed: stderr={r_a.stderr[:300]}')
+        self.assertEqual(r_b.returncode, 0, msg=f'r_b failed: stderr={r_b.stderr[:300]}')
+        self.assertNotEqual(r_a.stdout, r_b.stdout,
+                            msg=f"different seeds produced identical stdout — seed list NOT being honored:\n{r_a.stdout[:400]}")
 
 
 class TestCliReplParity(unittest.TestCase):

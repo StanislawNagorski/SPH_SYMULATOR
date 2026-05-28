@@ -88,6 +88,15 @@ def main():
         # (c) snapshot raw strategy BEFORE any wrap — T-04-13 mitigation.
         raw_strategy_fn = strategy_fn
 
+        # (d') Batch branch — early return, PRZED compare-agent i single-run (Phase 7 BATCH-01).
+        if args.batch:
+            from sphsim.batch import run_batch
+            from sphsim.cli.output import format_batch_summary
+            per_seed_results, aggregate = run_batch(args, raw_strategy_fn, params, K1)
+            # NOTE: Plan 07-04 will add write_batch_report(...) here.
+            print(format_batch_summary(args, aggregate, K1))
+            return
+
         # (d) Compare branch — early return, PRZED conditional wrap (step e).
         if args.compare_agent:
             res = run_compare(args, raw_strategy_fn, name, params, K1)
@@ -131,6 +140,15 @@ def main():
 
     # (c) snapshot raw strategy BEFORE any wrap — T-04-13 mitigation.
     raw_strategy_fn = STRATEGIES[args.strategy]
+
+    # (d') Batch branch — early return, PRZED compare-agent i single-run (Phase 7 BATCH-01).
+    if args.batch:
+        from sphsim.batch import run_batch
+        from sphsim.cli.output import format_batch_summary
+        per_seed_results, aggregate = run_batch(args, raw_strategy_fn, params, K1)
+        # NOTE: Plan 07-04 will add write_batch_report(...) here.
+        print(format_batch_summary(args, aggregate, K1))
+        return
 
     # (d) Compare branch — early return, PRZED conditional wrap (step e).
     if args.compare_agent:
