@@ -24,6 +24,7 @@
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -32,16 +33,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generate_baseline import INVOCATIONS, PROJECT_ROOT, FIXTURES_DIR, MONOLITH  # noqa: E402
 
-# Phase 4 D-67 (Strategia B): zamiast regenerować baseline_v1/*.json fixtures lub dodawać --no-agent
-# do INVOCATIONS, ignorujemy 3 nowe klucze (wprowadzone w Phase 4 jako agent veto layer) przy
-# compare z fixtures. To zachowuje semantykę "fixtures są oracle dla istniejących pól metrics"
-# bez konieczności regeneracji ani touch'owania generate_baseline.py.
-# Phase 4 D-67: trzy nowe klucze w metrics są ignorowane przy compare z baseline_v1 fixtures —
-# fixtures są oracle dla v1.0 zachowania i nie zawierają tych pól. Pola obecne tylko w actual output.
+# Phase 4 (Strategia B, D-67): trzy klucze ignorowane (veto_per_phase,
+# n_vetoed_total, agent_enabled) — wprowadzone w Phase 4 jako pola w env/metrics
+# bloku, nieobecne w baseline_v1 fixtures. Zamiast regenerować fixtures lub dodawać
+# --no-agent do INVOCATIONS, ignorujemy nowe klucze przy compare. Fixtures pozostają
+# oracle dla istniejących pól metrics; generate_baseline.py nieruszane.
+#
 # Phase 5 (Strategia B, mirror Phase 4 D-67): pięć nowych kluczy w env bloku
 # (K0, phi, rho, seed, valuation) ignorowane przy compare z baseline_v1 fixtures —
 # fixtures są oracle dla zachowania v1.0 i nie zawierają tych pól. Pola obecne
 # tylko w actual output po Plan 03 rozszerzeniu format_json env block.
+#
 # Phase 6 (Strategia B, mirror Phase 4 D-67 + Phase 5 D-PH5): nowy klucz
 # 'abstain_per_phase' (dict per-phase ABSTAIN counts) ignorowany przy compare —
 # fixtures baseline_v1 są oracle dla v1.0 i nie zawierają tego pola. Pole obecne
@@ -105,12 +107,17 @@ def run_invocation(args):
     Zwraca (dict, None) przy sukcesie lub (None, error_str) przy błędzie."""
     full_args = [sys.executable, str(MONOLITH), *args, '--no-agent', '--seed', '42', '--json']
     try:
+        # Phase 6 — opt-out side effects in regression: SPHSIM_NO_REPORT=1 forwarded
+        # do każdego subprocess'a tak, że 8 baseline runs NIE tworzy 24 plików w ./reports/.
+        # RESEARCH §G.18-G.19 + Pitfall 4 mitigation. os.environ dziedziczone, więc
+        # lokalne dev env (PATH, PYTHONPATH) propagują się normalnie.
         result = subprocess.run(
             full_args,
             cwd=str(PROJECT_ROOT),
             capture_output=True,
             text=True,
             check=True,
+            env={**os.environ, 'SPHSIM_NO_REPORT': '1'},
         )
     except subprocess.CalledProcessError as e:
         return None, f"subprocess exit {e.returncode}: {e.stderr.strip()}"
