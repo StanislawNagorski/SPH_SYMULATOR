@@ -22,7 +22,7 @@ Note: v1.0 nie był śledzony w GSD — istnieje jako "Validated" w PROJECT.md (
 - [x] **Phase 3: Custom strategy loader** - `importlib`-based loader plików `.py` + walidacja + szablon przykładowy (completed 2026-05-27)
 - [x] **Phase 4: Rational Agent veto layer** - Wrapper weto'ujący COMMIT przy `E[zysk] < 0` + tryb porównawczy (completed 2026-05-27)
 - [x] **Phase 5: Configurable environment** - Override `φ/ρ`, presety waluacji, serializacja konfiguracji do raportu (completed 2026-05-27)
-- [ ] **Phase 6: Report + plots generator** - Raport MD + 2 wykresy PNG (matplotlib) generowane zawsze
+- [x] **Phase 6: Report + plots generator** - Raport MD + 2 wykresy PNG (matplotlib) generowane zawsze (completed 2026-05-28)
 - [ ] **Phase 7: Batch runner + aggregation** - Wiele seedów, agregacja statystyczna, box-ploty
 
 ## Phase Details
@@ -230,5 +230,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Custom strategy loader | 4/4 | Complete   | 2026-05-27 |
 | 4. Rational Agent veto layer | 7/7 | Complete   | 2026-05-27 |
 | 5. Configurable environment | 5/5 | Complete   | 2026-05-27 |
-| 6. Report + plots generator | 5/6 | In Progress|  |
+| 6. Report + plots generator | 6/6 | Complete   | 2026-05-28 |
 | 7. Batch runner + aggregation | 0/TBD | Not started | - |
