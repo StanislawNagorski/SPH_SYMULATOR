@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Agent CLI
-status: complete
-stopped_at: Phase 7 exit gate ready
-last_updated: "2026-05-28T14:20:00.000Z"
-last_activity: 2026-05-28 -- Phase 7 complete — verify_phase7.sh PASS=32/FAIL=0
+status: verifying
+stopped_at: Phase 8 context gathered
+last_updated: "2026-05-28T16:03:21.062Z"
+last_activity: 2026-05-28 -- Phase 7 verify_phase7.sh PASS=32/FAIL=0 + ROADMAP closeout
 progress:
-  total_phases: 7
+  total_phases: 8
   completed_phases: 7
-  total_plans: 32
-  completed_plans: 32
-  percent: 100
+  total_plans: 38
+  completed_plans: 38
+  percent: 88
 ---
 
 # Project State
@@ -85,6 +85,11 @@ Recent decisions affecting current work:
 - [Phase 3]: Plan 03-03 (D-38/D-41/D-42/D-50): SPHShell extended to 6 commands; D-38 reload via sys.modules check BEFORE load_custom (was_loaded flag preserved); D-41 do_run uses DEFAULT_* env + hardcoded seed=42 + fabricated argparse.Namespace for format_human reuse; D-50 dispatch namespace `sphsim.strategies` vs `sphsim.custom` applied in do_strategies/do_strategy/do_run; ` [custom]` suffix in do_strategies listing for non-builtin
 - [Phase 3]: Plan 03-04 (D-51/D-52): examples/custom_strategy_template.py is canonical Polish-commented starter (max_phase default=4, alias threshold); examples/ is plain directory NOT a package (no __init__.py, no .gitignore); scripts/verify_phase3.sh exit gate runs 20 checks across 8 sections covering all 5 ROADMAP SCs + regression + invariant + loader tests + mutex; uses `grep > /dev/null` (not `grep -q`) and `{ cmd || true; } | grep` for pipefail/SIGPIPE safety
 
+### Roadmap Evolution
+
+- 2026-05-28: Phase 8 added — **Documentation + Interactive Tutorial** (polski przewodnik `docs/PRZEWODNIK.md` + REPL `tutorial` mode + `--tutorial` flag, kroki inspirowane `scripts/uat_*.sh`). Decision: REPL-native tutorial preferred over external bash script (lepsze UX, brak context-switchu, automatyczna weryfikacja).
+- 2026-05-28: Orphan `08-comprehensive-uat/` directory renamed to `07.1-comprehensive-uat/` (was post-Phase-7 cross-phase verification, never formally in ROADMAP) to free the `08` slot for the new docs phase.
+
 ### Pending Todos
 
 None yet.
@@ -110,6 +115,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-28T14:20:00.000Z
-Stopped at: Phase 7 exit gate ready — /gsd:verify-work pending
-Resume file: .planning/phases/07-batch-runner-aggregation/07-06-SUMMARY.md
+Last session: 2026-05-28T16:03:21.055Z
+Stopped at: Phase 8 context gathered
+Resume file: .planning/phases/08-documentation-interactive-tutorial/08-CONTEXT.md
