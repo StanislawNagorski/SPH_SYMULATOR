@@ -67,7 +67,7 @@ echo "Interpreter: $PY ($($PY --version 2>&1))"
 echo ""
 
 # Pre-flight cleanup
-rm -rf ./reports/
+rm -rf ./reports/tutorial-* ./reports/batch_* ./reports/[0-9]*
 
 echo ""
 echo "── Category A. docs/PRZEWODNIK.md exists + 5 D-11 sections + Lead pointer (DOC-01) ──"
@@ -119,9 +119,9 @@ check "D1 (TUT-01 help): 'tutorial' widoczne w 'help' REPL listy" \
 check "D2 (TUT-01 banner + step1): 'tutorial' w REPL pokazuje banner i [krok 1/8" \
     "printf 'tutorial\\nexit\\nexit\\n' | SPHSIM_NO_REPORT=1 $PY sph_sim.py --interactive 2>&1 | grep -F 'INTERAKTYWNY TUTORIAL' && printf 'tutorial\\nexit\\nexit\\n' | SPHSIM_NO_REPORT=1 $PY sph_sim.py --interactive 2>&1 | grep -F '[krok 1/8'"
 check "D3 (TUT-02 skip): 8 skipów dochodzi do 'pominięto — krok 8/8'" \
-    "rm -rf ./reports/; printf 'tutorial\\nskip\\nskip\\nskip\\nskip\\nskip\\nskip\\nskip\\nskip\\nexit\\n' | SPHSIM_NO_REPORT=1 $PY sph_sim.py --interactive 2>&1 | grep -F 'pominięto — krok 8/8'"
+    "rm -rf ./reports/tutorial-* ./reports/batch_* ./reports/[0-9]*; printf 'tutorial\\nskip\\nskip\\nskip\\nskip\\nskip\\nskip\\nskip\\nskip\\nexit\\n' | SPHSIM_NO_REPORT=1 $PY sph_sim.py --interactive 2>&1 | grep -F 'pominięto — krok 8/8'"
 check "D4 (GATE-01 non-skip): step 1 verification fires '✓ zaliczone — krok 1/8' po 'run naive zeta=0.75'" \
-    "rm -rf ./reports/; printf 'tutorial\\nrun naive zeta=0.75\\nexit\\nexit\\n' | SPHSIM_NO_REPORT='' $PY sph_sim.py --interactive 2>&1 | grep -F '✓ zaliczone — krok 1/8'"
+    "rm -rf ./reports/tutorial-* ./reports/batch_* ./reports/[0-9]*; printf 'tutorial\\nrun naive zeta=0.75\\nexit\\nexit\\n' | SPHSIM_NO_REPORT='' $PY sph_sim.py --interactive 2>&1 | grep -F '✓ zaliczone — krok 1/8'"
 check "D5 (TUT-03 back boundary): 'back' na kroku 1 → 'Już jesteś na pierwszym kroku.'" \
     "printf 'tutorial\\nback\\nexit\\nexit\\n' | SPHSIM_NO_REPORT=1 $PY sph_sim.py --interactive 2>&1 | grep -F 'Już jesteś na pierwszym kroku.'"
 check "D6 (TUT-04 Pitfall 1): 'exit' w tutorial nie kończy REPL — 'Tutorial opuszczony'" \
@@ -132,12 +132,12 @@ check "D7 (TUT-05 E2E): 'python sph_sim.py --tutorial' uruchamia tutorial — ba
 echo ""
 echo "── Category E. Tutorial reports → ./reports/tutorial-<ts>/step-N-<topic>/ (TUT-06) ──"
 check "E1 (TUT-06): tutorial run tworzy ./reports/tutorial-<ts>/step-1-baseline/report.md" \
-    "rm -rf ./reports/; printf 'tutorial\\nrun naive zeta=0.75\\nexit\\nexit\\n' | SPHSIM_NO_REPORT='' $PY sph_sim.py --interactive > /tmp/p8_tut.log 2>&1; ls -d ./reports/tutorial-*/step-1-baseline/ 2>/dev/null | head -1 | grep -F 'step-1-baseline' && ls ./reports/tutorial-*/step-1-baseline/report.md"
+    "rm -rf ./reports/tutorial-* ./reports/batch_* ./reports/[0-9]*; printf 'tutorial\\nrun naive zeta=0.75\\nexit\\nexit\\n' | SPHSIM_NO_REPORT='' $PY sph_sim.py --interactive > /tmp/p8_tut.log 2>&1; ls -d ./reports/tutorial-*/step-1-baseline/ 2>/dev/null | head -1 | grep -F 'step-1-baseline' && ls ./reports/tutorial-*/step-1-baseline/report.md"
 check "E2 (TUT-06 backwards-compat): non-tutorial run NIE tworzy tutorial-<ts>/ dir" \
-    "rm -rf ./reports/; printf 'run naive zeta=0.75\\nexit\\n' | SPHSIM_NO_REPORT='' $PY sph_sim.py --interactive > /tmp/p8_nontut.log 2>&1; ls -d ./reports/[0-9]*/ > /dev/null 2>&1 && ! ls -d ./reports/tutorial-*/ > /dev/null 2>&1"
+    "rm -rf ./reports/tutorial-* ./reports/batch_* ./reports/[0-9]*; printf 'run naive zeta=0.75\\nexit\\n' | SPHSIM_NO_REPORT='' $PY sph_sim.py --interactive > /tmp/p8_nontut.log 2>&1; ls -d ./reports/[0-9]*/ > /dev/null 2>&1 && ! ls -d ./reports/tutorial-*/ > /dev/null 2>&1"
 
 # Cleanup po Category E przed source-only checks
-rm -rf ./reports/
+rm -rf ./reports/tutorial-* ./reports/batch_* ./reports/[0-9]*
 
 echo ""
 echo "── Category F. Source assertions (TUT-01 verification) ──"
@@ -162,7 +162,7 @@ check "G3 (Phase 8 modules): tests.test_tutorial + tests.test_docs → OK (TUT-0
     "SPHSIM_NO_REPORT=1 $PY -m unittest tests.test_tutorial tests.test_docs > /tmp/p8_phase8tests.log 2>&1 && grep -E '^OK' /tmp/p8_phase8tests.log"
 
 # Category H — Final cleanup: usuń wszystkie reports/<ts>/ generowane przez smoke tests.
-rm -rf ./reports/
+rm -rf ./reports/tutorial-* ./reports/batch_* ./reports/[0-9]*
 
 # ── Summary ──
 echo ""
