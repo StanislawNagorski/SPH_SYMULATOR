@@ -1,16 +1,23 @@
-"""REPL — tryb interaktywny SPH symulatora (Phase 2 + Phase 3 + Phase 4 agent).
+"""REPL — tryb interaktywny SPH symulatora (Phase 2 + Phase 3 + Phase 4 agent + Phase 7 batch + Phase 8 tutorial).
 
-Klasa SPHShell(cmd.Cmd) udostępnia 7 komend bez prefiksu '/':
+Klasa SPHShell(cmd.Cmd) udostępnia 7 komend bez prefiksu '/' (8 z dodatkiem `tutorial`):
   - help        — lista komend (D-17, CLI-02)
   - exit        — zakończ sesję (D-20, CLI-03)
   - strategies  — lista wbudowanych i custom strategii (D-29/D-50, STRAT-01)
   - strategy <nazwa>             — szczegóły strategii (D-25/D-26, STRAT-02)
+  - tutorial                     — interaktywny tutorial v1.1 (Phase 8 Plan 08-04, TUT-01)
   - custom <ścieżka> [k=v ...]   — załaduj custom strategię z pliku .py (D-37/D-38, STRAT-03)
   - run <nazwa> [k=v ...]        — uruchom symulację built-in lub custom (D-41/D-42)
   - compare <nazwa> [k=v ...]    — porównaj strategię z/bez RationalAgent (D-61, AGENT-05)
+  - batch <nazwa> --seeds N|lista [k=v ...] — uruchom strategię na wielu seedach (Phase 7 BATCH-01)
 
-Funkcja run_repl() jest jedynym publicznym entry-pointem — wywoływana z
-sphsim/cli/main.py gdy args.interactive jest True (D-15).
+Funkcja run_repl(start_in_tutorial=False) jest jedynym publicznym entry-pointem —
+wywoływana z sphsim/cli/main.py gdy args.interactive lub args.tutorial jest True
+(D-15 + Phase 8 Plan 08-02 wiring).
+
+Tutorial mode (Phase 8): __init__ + precmd + postcmd współpracują z TutorialFlow
+(sphsim/cli/tutorial.py) żeby udostępnić skip/back/repeat/exit + auto-weryfikację
+kroków. Pitfall 1: precmd przejmuje `exit` przed do_exit gdy tutorial active.
 
 Wszystkie komunikaty użytkownika po polsku (PROJECT.md constraint).
 Stdlib only: cmd + readline + importlib + os + sys + argparse + atexit (D-18, D-19); plugin loader (D-46).
@@ -35,6 +42,8 @@ from sphsim.config import (
 )
 # Phase 6 REPORT-01/03: side-effect raport po do_run / do_compare; banner na stderr.
 from sphsim.report import write_report
+# Phase 8 (Plan 08-04): tutorial state machine — pure dispatch + per-step content.
+from sphsim.cli.tutorial import TutorialFlow, STEP_TOPICS, STEP_TASKS, check_step
 
 
 HISTORY_FILE = os.path.expanduser('~/.sphsim_history')
@@ -58,7 +67,98 @@ class SPHShell(cmd.Cmd):
     intro = INTRO
     prompt = 'sph> '  # D-22 — krótkie, bez ANSI
 
-    # ---- help (override cmd.Cmd auto-help — D-17, CLI-02; 6 komend po Phase 3) ----
+    # ---- __init__ (Phase 8 Plan 08-04) ----
+    # NOTE: super().__init__() jest krytyczne — cmd.Cmd inicjalizuje cmdqueue, use_rawinput,
+    # readline integration. Bez super() override'y precmd/postcmd nie dostają dispatchu.
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._tutorial_state = None  # TutorialFlow | None — active gdy do_tutorial wywołane
+        self._last_sim_result = None  # set przez do_run/do_compare/do_batch na success path
+
+    # ---- precmd (Phase 8 Plan 08-04, D-05, TUT-02..04) ----
+    # Intercept skip/back/repeat/exit BEFORE cmd.Cmd dispatch gdy tutorial active.
+    # Zwraca '' żeby short-circuit'ować standardową komendę (Pitfall 1: exit collision).
+    def precmd(self, line):
+        if self._tutorial_state is None:
+            return line
+        stripped = line.strip()
+        ts = self._tutorial_state
+
+        if stripped == 'skip':
+            step = ts.step
+            ts.hint_count = 0
+            if ts.step < ts.total:
+                ts.step += 1
+                print(f'⤼ pominięto — krok {step}/{ts.total}')
+                self._show_tutorial_step()
+            else:
+                print(f'⤼ pominięto — krok {step}/{ts.total}. Tutorial zakończony.')
+                self._tutorial_state = None
+            return ''
+
+        if stripped == 'back':
+            if ts.step > 1:
+                ts.step -= 1
+                ts.hint_count = 0
+                print(f'↩ cofnięto do kroku {ts.step}/{ts.total}')
+                self._show_tutorial_step()
+            else:
+                print('Już jesteś na pierwszym kroku.')
+            return ''
+
+        if stripped == 'repeat':
+            self._show_tutorial_step()
+            return ''
+
+        if stripped == 'exit':
+            print(f'Tutorial opuszczony na kroku {ts.step}/{ts.total}. '
+                  f'Stan REPL zachowany (załadowane strategie, historia). '
+                  f'Wpisz `exit` ponownie żeby zakończyć REPL.')
+            self._tutorial_state = None
+            return ''
+
+        return line
+
+    # ---- postcmd (Phase 8 Plan 08-04, RESEARCH §Pattern 3) ----
+    # Verify step completion po wykonaniu komendy. Pitfall 2: skip empty lines
+    # (precmd short-circuit produkuje ''). Pitfall 3: consume _last_sim_result.
+    def postcmd(self, stop, line):
+        if not line.strip() or self._tutorial_state is None or stop:
+            return stop
+        ts = self._tutorial_state
+        result = self._last_sim_result
+
+        passed = check_step(
+            ts.step, line.strip(), result,
+            STRATEGIES, BUILTIN_STRATEGIES,
+            tutorial_flow=ts,
+        )
+
+        if passed:
+            step = ts.step
+            ts.hint_count = 0
+            self._last_sim_result = None  # Pitfall 3: consume po verification
+            if ts.step < ts.total:
+                ts.step += 1
+                print(f'\n✓ zaliczone — krok {step}/{ts.total}')
+                self._show_tutorial_step()
+            else:
+                print(f'\n✓ zaliczone — krok {step}/{ts.total}. Tutorial ukończony!')
+                self._tutorial_state = None
+        else:
+            # Hint only when meaningful attempt: sim-producing step (result != None)
+            # OR display-only step (2/4/7 — no sim dependency).
+            if result is not None or ts.step in (2, 4, 7):
+                ts.hint_count += 1
+                self._last_sim_result = None  # reset niezależnie od passed/failed
+                if ts.hint_count <= ts.MAX_HINTS:
+                    self._show_step_hint(ts.step)
+                else:
+                    print('Wskazówka: Wpisz `skip` żeby przejść do następnego kroku bez weryfikacji.')
+
+        return stop
+
+    # ---- help (override cmd.Cmd auto-help — D-17, CLI-02; +tutorial po Phase 8) ----
     def do_help(self, arg):
         """Wyświetl listę dostępnych komend."""
         print("Dostępne komendy:")
@@ -66,6 +166,7 @@ class SPHShell(cmd.Cmd):
         print("  exit                            — Zakończ sesję (alternatywnie Ctrl+D).")
         print("  strategies                      — Wyświetl listę wbudowanych i custom strategii.")
         print("  strategy <nazwa>                — Wyświetl szczegóły strategii (parametry, baseline KPI).")
+        print("  tutorial                        — Uruchom interaktywny tutorial v1.1 (≤15 min).")
         print("  custom <ścieżka> [k=v ...]      — Załaduj custom strategię z pliku .py.")
         print("  run <nazwa> [k=v ...]           — Uruchom symulację (built-in lub custom).")
         print("  compare <strategia> [k=v ...]   — Porównaj strategię z i bez RationalAgent (delta KPI).")
@@ -403,6 +504,55 @@ class SPHShell(cmd.Cmd):
             print(f'Raport batchowy zapisany do: {report_dir}/report.md', file=sys.stderr)
         print(format_batch_summary(fake_args, aggregate, DEFAULT_K1))
 
+    # ---- tutorial helpers (Phase 8 Plan 08-04) ----
+    def _show_tutorial_step(self):
+        """Wyświetl bieżący krok tutoriala (tytuł + opis). Wywoływane z do_tutorial,
+        precmd (skip/back/repeat) oraz postcmd (auto-advance po passed)."""
+        ts = self._tutorial_state
+        if ts is None:
+            return
+        task = STEP_TASKS.get(ts.step)
+        if task is None:
+            print(f'[BŁĄD] Nieznany krok {ts.step} — przerywam tutorial.')
+            self._tutorial_state = None
+            return
+        print(f'\n[krok {ts.step}/{ts.total} — {task.title}]')
+        print('══════════════════════════════════════════════════════════')
+        print(task.description)
+        print('══════════════════════════════════════════════════════════')
+        # Note: step 6 jest soft-pass informational step (Plan 03 / Open Question #2
+        # resolution). Zero filesystem snapshot — check_step(6, line, ...) zwraca
+        # True dla dowolnej non-empty linii.
+
+    def _show_step_hint(self, step_n):
+        """Wyświetl hint dla bieżącego kroku gdy postcmd failed verification."""
+        task = STEP_TASKS.get(step_n)
+        if task is None:
+            return
+        print(f'\nNie rozpoznano polecenia dla kroku {step_n}. Oczekiwano:')
+        print(f'  {task.expected_command_hint}')
+        print('Spróbuj jeszcze raz lub wpisz `skip` żeby pominąć.')
+
+    # ---- tutorial (Phase 8 Plan 08-04, TUT-01) ----
+    def do_tutorial(self, arg):
+        """Uruchom interaktywny tutorial v1.1 (~8 kroków, ≤15 min)."""
+        if self._tutorial_state is not None:
+            print('Tutorial już jest aktywny. Wpisz `repeat` żeby zobaczyć bieżący krok, `exit` żeby wyjść.')
+            return
+        self._tutorial_state = TutorialFlow()
+        # Header banner explains exit-word disambiguation (Researcher Open Question #2).
+        print(
+            '\n'
+            '══════════════════════════════════════════════════════════\n'
+            '  INTERAKTYWNY TUTORIAL SPH SYMULATORA v1.1\n'
+            '  ~8 kroków, ≤15 minut\n'
+            '  Sterowanie: skip | back | repeat | exit\n'
+            '  `exit` wraca do REPL (stan zachowany), nie kończy sesji.\n'
+            '  Wpisz `exit` ponownie żeby zakończyć REPL.\n'
+            '══════════════════════════════════════════════════════════'
+        )
+        self._show_tutorial_step()
+
     # ---- default — nieznana komenda (D-30) ----
     def default(self, line):
         """Override cmd.Cmd default — Polski komunikat dla nieznanych komend."""
@@ -425,12 +575,18 @@ def _write_history_silent():
         pass
 
 
-def run_repl():
+def run_repl(start_in_tutorial: bool = False):
     """Top-level entry-point REPL'a.
 
     Ładuje historię readline (cicho ignoruje FileNotFoundError i pokrewne
     OSError — D-19; Rule 2 robustness dla sandboxed środowisk),
     rejestruje atexit handler do zapisu historii, uruchamia cmdloop().
+
+    Args:
+        start_in_tutorial: gdy True (Phase 8 Plan 08-04, TUT-05), wstrzykuje
+            'tutorial' do cmdqueue przed cmdloop() — REPL natychmiast wchodzi
+            w tryb tutorial po wyświetleniu INTRO banneru. Wywoływane przez
+            main.py gdy args.tutorial=True (Plan 08-02 wiring).
     """
     try:
         readline.read_history_file(HISTORY_FILE)
@@ -441,4 +597,9 @@ def run_repl():
 
     atexit.register(_write_history_silent)
 
-    SPHShell().cmdloop()
+    shell = SPHShell()
+    if start_in_tutorial:
+        # cmdqueue jest konsumowany PRZED stdin (cmd.Cmd contract — RESEARCH §Pattern 6).
+        # INTRO banner wyświetla się normalnie, potem dispatcher uruchamia do_tutorial.
+        shell.cmdqueue.append('tutorial')
+    shell.cmdloop()
