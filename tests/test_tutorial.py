@@ -102,32 +102,135 @@ def _run_sph(*args, **kwargs):
     )
 
 
-class TestTutorialEntry(unittest.TestCase):
-    """TUT-01: komenda do_tutorial dostępna w REPL ('tutorial' wpisane w REPL wchodzi w tryb tutorial)."""
+def _run_repl_interactive(commands, timeout=120, no_report='1'):
+    """Subprocess helper — uruchamia REPL z podanymi komendami via stdin.
 
-    @unittest.skip("Wave 2 — plan 08-04 wires do_tutorial in repl.py")
+    Mirror tests/test_repl_agent_task1.py::TestReplTask1Behavior._run_repl. Used by
+    Wave 2 / Plan 08-04 tutorial behavior tests (TUT-01..TUT-04).
+    """
+    env = {**os.environ, 'SPHSIM_NO_REPORT': no_report}
+    return subprocess.run(
+        [sys.executable, 'sph_sim.py', '--interactive'],
+        input=commands,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        cwd=_PROJECT_ROOT,
+        env=env,
+    )
+
+
+def _run_repl_tutorial_flag(commands, timeout=120, no_report='1'):
+    """Subprocess helper — runs `python sph_sim.py --tutorial` with stdin commands."""
+    env = {**os.environ, 'SPHSIM_NO_REPORT': no_report}
+    return subprocess.run(
+        [sys.executable, 'sph_sim.py', '--tutorial'],
+        input=commands,
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        cwd=_PROJECT_ROOT,
+        env=env,
+    )
+
+
+class TestTutorialEntry(unittest.TestCase):
+    """TUT-01: komenda do_tutorial dostępna w REPL — Wave 2 / Plan 08-04 wiring.
+
+    Combines source-grep tests (cheap structural verification of SPHShell additions)
+    with subprocess behavior tests (end-to-end TUT-01 — banner + step 1 display +
+    do_help line). All Polish copy strings asserted VERBATIM per the action block of
+    08-04-PLAN.md.
+    """
+
+    def _read_repl(self):
+        path = os.path.join(_PROJECT_ROOT, 'sphsim', 'cli', 'repl.py')
+        with open(path, 'r', encoding='utf-8') as f:
+            return f.read()
+
     def test_do_tutorial_present_in_repl(self):
-        self.fail("not yet implemented — see skip reason")
+        """TUT-01 source: SPHShell has do_tutorial + precmd + postcmd."""
+        src = self._read_repl()
+        self.assertIn('def do_tutorial', src,
+                      msg='SPHShell brakuje def do_tutorial')
+        self.assertIn('def precmd', src,
+                      msg='SPHShell brakuje def precmd')
+        self.assertIn('def postcmd', src,
+                      msg='SPHShell brakuje def postcmd')
+
+    def test_tutorial_banner_and_step1_shown(self):
+        """TUT-01 behavior: `tutorial` w REPL → banner + krok 1/8 + Tutorial opuszczony po exit."""
+        r = _run_repl_interactive('tutorial\nexit\nexit\n')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
+        self.assertIn('INTERAKTYWNY TUTORIAL', r.stdout,
+                      msg=f'banner brakuje w stdout: {r.stdout[:800]}')
+        self.assertIn('[krok 1/8', r.stdout,
+                      msg=f'step 1 display brakuje w stdout: {r.stdout[:800]}')
+        self.assertIn('Tutorial opuszczony', r.stdout,
+                      msg=f'exit msg brakuje w stdout: {r.stdout[:800]}')
+
+    def test_help_includes_tutorial_line(self):
+        """do_help wyświetla wiersz dla `tutorial` (discoverability)."""
+        r = _run_repl_interactive('help\nexit\n')
+        self.assertIn('tutorial', r.stdout,
+                      msg=f'do_help nie wymienia tutorial: {r.stdout[:800]}')
 
 
 class TestTutorialControls(unittest.TestCase):
-    """TUT-02 + TUT-03: nawigacja skip/back w trybie tutorial."""
+    """TUT-02 + TUT-03: nawigacja skip/back/repeat w trybie tutorial."""
 
-    @unittest.skip("Wave 2 — plan 08-04")
     def test_skip_advances_counter(self):
-        self.fail("not yet implemented — see skip reason")
+        """TUT-02: skip advances step counter (1 → 2 displayed)."""
+        r = _run_repl_interactive('tutorial\nskip\nexit\nexit\n')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
+        self.assertIn('pominięto — krok 1/8', r.stdout,
+                      msg=f'pominięto komunikat brakuje: {r.stdout[:1500]}')
+        self.assertIn('[krok 2/8', r.stdout,
+                      msg=f'krok 2/8 nie pokazany po skip: {r.stdout[:1500]}')
 
-    @unittest.skip("Wave 2 — plan 08-04")
     def test_back_decrements_counter(self):
-        self.fail("not yet implemented — see skip reason")
+        """TUT-03: back z kroku 2 wraca do kroku 1 (decrement)."""
+        r = _run_repl_interactive('tutorial\nskip\nback\nexit\nexit\n')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
+        self.assertIn('cofnięto do kroku 1/8', r.stdout,
+                      msg=f'back nie cofnął do kroku 1: {r.stdout[:1500]}')
+
+    def test_back_at_step_one_boundary(self):
+        """TUT-03 boundary: back na step 1 → polski komunikat 'Już jesteś na pierwszym kroku.'"""
+        r = _run_repl_interactive('tutorial\nback\nexit\nexit\n')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
+        self.assertIn('Już jesteś na pierwszym kroku.', r.stdout,
+                      msg=f'back boundary msg brakuje: {r.stdout[:1500]}')
 
 
 class TestTutorialExit(unittest.TestCase):
-    """TUT-04: 'exit' w trybie tutorial wraca do REPL, nie kończy procesu."""
+    """TUT-04: 'exit' w trybie tutorial wraca do REPL, nie kończy procesu (Pitfall 1)."""
 
-    @unittest.skip("Wave 2 — plan 08-04")
     def test_exit_in_tutorial_does_not_quit_repl(self):
-        self.fail("not yet implemented — see skip reason")
+        """TUT-04: tutorial exit → REPL żyje dalej; strategies still works; final exit fires do_exit."""
+        r = _run_repl_interactive('tutorial\nexit\nstrategies\nexit\n')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
+        self.assertIn('Tutorial opuszczony', r.stdout,
+                      msg=f'tutorial exit msg brakuje: {r.stdout[:1500]}')
+        # Strategies command must have produced output AFTER tutorial exit (REPL still alive).
+        self.assertIn('Dostępne strategie', r.stdout,
+                      msg=f'strategies command nie zadziałał po tutorial exit: {r.stdout[:1500]}')
+        # Final exit triggers do_exit farewell ONCE.
+        self.assertIn('Do widzenia.', r.stdout,
+                      msg=f'do_exit farewell brakuje na końcu: {r.stdout[:1500]}')
+
+    def test_pitfall_1_tutorial_exit_does_not_trigger_do_exit(self):
+        """Pitfall 1: tutorial 'exit' nie powinno triggerować do_exit (Do widzenia.) — tylko drugi exit."""
+        r = _run_repl_interactive('tutorial\nexit\nstrategies\nexit\n')
+        # `Do widzenia.` should appear EXACTLY once — only from the FINAL exit (after `strategies`).
+        count = r.stdout.count('Do widzenia.')
+        self.assertEqual(count, 1,
+                         msg=f"`Do widzenia.` count should be 1, got {count}. stdout={r.stdout[:2000]}")
 
 
 class TestTutorialCLI(unittest.TestCase):
@@ -232,9 +335,15 @@ class TestTutorialCLI(unittest.TestCase):
             msg=f'Polski required-mode komunikat brakuje w stderr: {combined[:600]}'
         )
 
-    @unittest.skip("Wave 2 — plan 08-04 wires run_repl(start_in_tutorial=True)")
     def test_tutorial_flag_enters_tutorial_mode(self):
-        self.fail("not yet implemented — see skip reason")
+        """TUT-05 end-to-end: `python sph_sim.py --tutorial` → banner + krok 1/8 auto-shown."""
+        r = _run_repl_tutorial_flag('exit\nexit\n')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'--tutorial crashed rc={r.returncode}, stderr={r.stderr[:600]}')
+        self.assertIn('INTERAKTYWNY TUTORIAL', r.stdout,
+                      msg=f'banner brakuje pod --tutorial: {r.stdout[:1500]}')
+        self.assertIn('[krok 1/8', r.stdout,
+                      msg=f'krok 1/8 nie pokazany pod --tutorial: {r.stdout[:1500]}')
 
 
 class TestTutorialReports(unittest.TestCase):
