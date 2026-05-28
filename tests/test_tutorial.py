@@ -232,6 +232,27 @@ class TestTutorialExit(unittest.TestCase):
         self.assertEqual(count, 1,
                          msg=f"`Do widzenia.` count should be 1, got {count}. stdout={r.stdout[:2000]}")
 
+    def test_cr01_tutorial_banner_shown_exactly_once(self):
+        """CR-01 regression: tutorial banner + step 1 description block must appear EXACTLY
+        once for `printf 'tutorial\\nexit\\nexit\\n' | sph_sim.py --interactive`.
+
+        Pre-fix bug: precmd returning '' for control verbs (skip/back/repeat/exit) caused
+        cmd.Cmd.emptyline() default behavior to re-run lastcmd (typically `tutorial`),
+        restarting the tutorial banner. Fix: override SPHShell.emptyline() to no-op.
+        """
+        r = _run_repl_interactive('tutorial\nexit\nexit\n')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
+        banner_count = r.stdout.count('INTERAKTYWNY TUTORIAL SPH SYMULATORA')
+        self.assertEqual(banner_count, 1,
+                         msg=f"Tutorial banner must appear EXACTLY once, got {banner_count}. "
+                             f"stdout={r.stdout[:3000]}")
+        # Step 1 description block — `[krok 1/8 — Baseline]` heading — also exactly once.
+        step1_count = r.stdout.count('[krok 1/8')
+        self.assertEqual(step1_count, 1,
+                         msg=f"Step 1 heading must appear EXACTLY once, got {step1_count}. "
+                             f"stdout={r.stdout[:3000]}")
+
 
 class TestTutorialCLI(unittest.TestCase):
     """TUT-05: flaga --tutorial — argparse layer (Wave 1, Plan 08-02).

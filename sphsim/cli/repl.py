@@ -75,6 +75,18 @@ class SPHShell(cmd.Cmd):
         self._tutorial_state = None  # TutorialFlow | None — active gdy do_tutorial wywołane
         self._last_sim_result = None  # set przez do_run/do_compare/do_batch na success path
 
+    # ---- emptyline (Phase 8 CR-01 fix) ----
+    def emptyline(self):
+        """Suppress cmd.Cmd's default 'repeat lastcmd' behavior.
+
+        Required because precmd returns '' to short-circuit tutorial control
+        verbs (skip/back/repeat/exit); without this override, those verbs
+        silently re-trigger the previous command (commonly `tutorial`),
+        restarting the tutorial banner. Also matches REPL UX convention
+        that bare Enter does nothing.
+        """
+        return None
+
     # ---- precmd (Phase 8 Plan 08-04, D-05, TUT-02..04) ----
     # Intercept skip/back/repeat/exit BEFORE cmd.Cmd dispatch gdy tutorial active.
     # Zwraca '' żeby short-circuit'ować standardową komendę (Pitfall 1: exit collision).
