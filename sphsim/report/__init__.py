@@ -29,7 +29,7 @@ from datetime import datetime
 from sphsim.report.markdown import render_report
 from sphsim.report.plots import plot_decision_distribution, plot_kpi_timeseries
 
-__all__ = ['write_report', 'render_report']
+__all__ = ['write_report', 'render_report', 'write_batch_report']
 
 
 def _timestamp() -> str:
@@ -150,4 +150,81 @@ def write_report(args, res, params, K1, *, mode='single'):
         # przy formatowaniu komunikatu wyżej). Nigdy nie pozwalamy report side-
         # effect zabić CLI.
         print(f'[OSTRZEŻENIE] Raport: {e}', file=sys.stderr)
+        return None
+
+
+def write_batch_report(args, per_seed_results, aggregate, params, K1, seeds_list):
+    """Phase 7 BATCH-03+PLOT-04: zapisuje raport batchowy MD + boxplot PNG.
+
+    Symetryczne API do `write_report`, ale konsumuje LISTĘ dictów (jeden per seed) +
+    aggregate (z `aggregate_kpis`) zamiast pojedynczego `res`. Tworzy katalog
+    `./reports/batch_<timestamp>/` z dwoma plikami: `report.md` + `batch_aggregate.png`.
+
+    Args:
+        args:             argparse.Namespace (wymagane pola: nU, nSUS, T, kappa,
+                          alpha, K0, phi, rho, seed, strategy, no_agent).
+        per_seed_results: list[dict[str, float]] — N dictów z 5 kluczami z KPIS,
+                          jeden per seed (output `run_batch`).
+        aggregate:        dict[str, AggregateStat] — `aggregate_kpis` output.
+        params:           dict parametrów strategii.
+        K1:               float (może być float('inf')).
+        seeds_list:       list[int] — wartości seedów odpowiadające per_seed_results.
+
+    Returns:
+        pathlib.Path do utworzonego katalogu, lub None gdy:
+          (a) opt-out env var SPHSIM_NO_REPORT=1 ustawione,
+          (b) mkdir failure,
+          (c) render_batch_report rzucił wyjątek.
+
+    Side effects:
+        mkdir `./reports/batch_<ts>/` + zapis 2 plików (report.md + batch_aggregate.png).
+        Wszystkie wyjątki łapane — write_batch_report NIGDY nie rzuca do CLI.
+        Banner 'Raport batchowy zapisany do: ...' emitowany przez CALLER (na sys.stderr).
+    """
+    # ── Opt-out (Phase 6 contract preserved) ──
+    if os.environ.get('SPHSIM_NO_REPORT') == '1':
+        return None
+
+    # ── Exception isolation (Pitfall 6) — raport NIGDY nie zabija CLI ──
+    try:
+        # mkdir with collision retry (-N suffix) — symmetric to _resolve_report_dir.
+        try:
+            ts = _timestamp()
+            base = Path('reports') / f'batch_{ts}'
+            n = 1
+            while base.exists():
+                n += 1
+                base = Path('reports') / f'batch_{ts}-{n}'
+            base.mkdir(parents=True, exist_ok=False)
+            report_dir = base
+        except OSError as e:
+            print(f'[OSTRZEŻENIE] Nie udało się utworzyć katalogu raportu batch: {e}. '
+                  f'Raport pominięty.', file=sys.stderr)
+            return None
+
+        # Plot generation — defensive: catch ALL exceptions so MD still writes
+        # nawet jeśli matplotlib z jakiegoś powodu się wywali (font issue, OOM, ...).
+        try:
+            from sphsim.report.plots import plot_batch_aggregate
+            plot_batch_aggregate(per_seed_results, report_dir / 'batch_aggregate.png')
+        except Exception as e:
+            print(f'[OSTRZEŻENIE] Błąd generowania batch_aggregate.png: {e}. '
+                  f'Kontynuuję.', file=sys.stderr)
+
+        # Markdown — jeśli się nie zapisze, raport jest bezużyteczny; zwracamy None
+        # żeby caller NIE wypisał false-positive banner.
+        try:
+            from sphsim.report.batch_markdown import render_batch_report
+            md = render_batch_report(args, per_seed_results, aggregate, params, K1, seeds_list)
+            (report_dir / 'report.md').write_text(md, encoding='utf-8')
+        except Exception as e:
+            print(f'[OSTRZEŻENIE] Błąd generowania raportu batch MD: {e}. '
+                  f'Raport niekompletny.', file=sys.stderr)
+            return None
+
+        return report_dir
+
+    except Exception as e:
+        # Last-resort catch — nigdy nie pozwalamy report side-effect zabić CLI.
+        print(f'[OSTRZEŻENIE] Raport batch: {e}', file=sys.stderr)
         return None

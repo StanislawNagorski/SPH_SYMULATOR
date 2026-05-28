@@ -93,7 +93,11 @@ def main():
             from sphsim.batch import run_batch
             from sphsim.cli.output import format_batch_summary
             per_seed_results, aggregate = run_batch(args, raw_strategy_fn, params, K1)
-            # NOTE: Plan 07-04 will add write_batch_report(...) here.
+            # Phase 7 BATCH-03 + PLOT-04: side-effect raport batchowy po sukcesie run_batch.
+            from sphsim.report import write_batch_report
+            report_dir = write_batch_report(args, per_seed_results, aggregate, params, K1, args.seeds)
+            if report_dir:
+                print(f'Raport batchowy zapisany do: {report_dir}/report.md', file=sys.stderr)
             print(format_batch_summary(args, aggregate, K1))
             return
 
@@ -146,7 +150,11 @@ def main():
         from sphsim.batch import run_batch
         from sphsim.cli.output import format_batch_summary
         per_seed_results, aggregate = run_batch(args, raw_strategy_fn, params, K1)
-        # NOTE: Plan 07-04 will add write_batch_report(...) here.
+        # Phase 7 BATCH-03 + PLOT-04: side-effect raport batchowy po sukcesie run_batch.
+        from sphsim.report import write_batch_report
+        report_dir = write_batch_report(args, per_seed_results, aggregate, params, K1, args.seeds)
+        if report_dir:
+            print(f'Raport batchowy zapisany do: {report_dir}/report.md', file=sys.stderr)
         print(format_batch_summary(args, aggregate, K1))
         return
 
