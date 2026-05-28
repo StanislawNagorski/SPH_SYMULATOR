@@ -9,3 +9,7 @@ __pycache__/
 Thumbs.db
 *.swp
 *.swo
+
+# Phase 6 — report side effects (REPORT-01); see RESEARCH §C.7.
+# Każde uruchomienie symulacji tworzy ./reports/<timestamp>/. Lokalnie nie commitujemy.
+reports/
