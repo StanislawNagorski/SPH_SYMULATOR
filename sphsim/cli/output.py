@@ -14,11 +14,15 @@ def format_json(args, res, params, K1):
     }
     if 'comparison' in res:
         # Tryb --compare-agent: zastąp 'metrics' blokiem 'comparison' (D-67).
+        # Phase 6: _with_agent_full top-level key musi być pominięty (RESEARCH §N.1).
         out['comparison'] = res['comparison']
     else:
         # Standardowy tryb: dodaj agent_enabled do metrics (D-67 backwards compat).
+        # Phase 6: filtr `not k.startswith('_')` strippuje prywatne klucze (np. _with_agent_full)
+        # — chroni SC#6 stdout-cleanliness i regression baseline equality.
         out['metrics'] = {
-            **{k: v for k, v in res.items() if k not in ('history', 'devices')},
+            **{k: v for k, v in res.items()
+               if k not in ('history', 'devices') and not k.startswith('_')},
             'agent_enabled': not args.no_agent,
         }
     return json.dumps(out, indent=2)

@@ -1,21 +1,153 @@
 """Generator raportu MD + wykresów PNG (Phase 6, REPORT-01..03, PLOT-01..03).
 
 Public surface:
-  - render_report(args, res, params, K1, *, mode='single'|'compare') -> str
-    Pure function — returns full Markdown report as single string.
-
   - write_report(args, res, params, K1, *, mode='single'|'compare') -> Path | None
-    ORCHESTRATOR — inserted by Plan 04 (Wave 3). Creates ./reports/<ts>/,
-    calls render_report + plot_* functions, writes 3 files. Returns Path
-    to created dir or None when opt-out (SPHSIM_NO_REPORT=1) or mkdir fail.
+    Orchestrator — tworzy ./reports/<ts>/, woła render_report + plot_*,
+    zapisuje 3 pliki. Zwraca Path do katalogu raportu lub None gdy:
+      (a) opt-out env var SPHSIM_NO_REPORT=1 ustawione,
+      (b) mkdir failure (PermissionError, OSError),
+      (c) render_report rzucił wyjątek.
+    Nigdy nie rzuca — wszystkie wyjątki łapane i logowane na stderr
+    (RESEARCH §C.7 + Pitfall 6 — report side-effect MUST NOT crash CLI).
 
-Plan 02 (Wave 2) lands the pure-function side (render_report + markdown
-assembly). Plan 03 (Wave 2 parallel) lands the plot generators. Plan 04
-(Wave 3) wires them together via write_report.
+  - render_report(args, res, params, K1, *, mode) -> str
+    Re-eksport z markdown.py — pure function, używana też przez testy.
+
+Opt-out: env var SPHSIM_NO_REPORT=1 (CI, regression check, tests). Caller
+otrzymuje None — pozwala pominąć banner i kontynuować bez side-effectów.
+
+Banner: 'Raport zapisany do: ...' zawsze drukowany przez CALLER (main.py /
+repl.py) na sys.stderr (Pitfall 3 — stdout cleanliness dla --json mode).
+write_report samo zwraca Path; banner jest decyzją wywołującego, NIE
+write_report.
 """
+import os
+import sys
+from pathlib import Path
+from datetime import datetime
+
 from sphsim.report.markdown import render_report
+from sphsim.report.plots import plot_decision_distribution, plot_kpi_timeseries
 
-# Plan 04 placeholder — write_report orchestrator inserted here in Wave 3.
-# Do not modify this file in Plan 03 (plotting side stays in plots.py).
+__all__ = ['write_report', 'render_report']
 
-__all__ = ['render_report']
+
+def _timestamp() -> str:
+    """ISO-like, fs-safe na Windows: %Y%m%d-%H%M%S (RESEARCH §C.7)."""
+    return datetime.now().strftime('%Y%m%d-%H%M%S')
+
+
+def _resolve_report_dir(base: Path = None) -> Path:
+    """Tworzy ./reports/<ts>/ z collision retry suffiks -N (RESEARCH §C.7).
+
+    Args:
+        base: opcjonalny base directory (test override); default Path('reports').
+
+    Returns:
+        Path do utworzonego katalogu (mkdir wykonany).
+
+    Raises:
+        OSError (PermissionError, etc.) — handled by caller; NIE propaguje do CLI.
+    """
+    base = base if base is not None else Path('reports')
+    ts = _timestamp()
+    candidate = base / ts
+    n = 1
+    while candidate.exists():
+        n += 1
+        candidate = base / f'{ts}-{n}'
+    candidate.mkdir(parents=True, exist_ok=False)
+    return candidate
+
+
+def _extract_plot_source(res, mode):
+    """Wybiera dict z danymi dla PNG-ów: w compare bierze _with_agent_full (z history).
+
+    Plot generators (plot_decision_distribution, plot_kpi_timeseries) potrzebują
+    history list — która jest strippowana z comparison.with_agent dict-comp.
+    Resolution (RESEARCH §N.1): run_compare wstrzykuje '_with_agent_full' (full
+    res_with z history) jako prywatny klucz; write_report konsumuje, format_json
+    strippuje underscore-prefixed top-level keys.
+    """
+    if mode == 'compare':
+        # Preferowane: _with_agent_full key (RESEARCH §N.1 resolution — full res_with).
+        # Fallback: comparison.with_agent (bez history — plot_kpi_timeseries silent-skipuje).
+        return res.get('_with_agent_full') or res.get('comparison', {}).get('with_agent', {})
+    return res
+
+
+def write_report(args, res, params, K1, *, mode='single'):
+    """Zapisuje raport MD + 2 PNG do ./reports/<timestamp>/.
+
+    Args:
+        args:    argparse.Namespace (CLI args lub fake_args z REPL).
+        res:     dict z sim.run() (single) lub run_compare (compare).
+        params:  dict parametrów strategii.
+        K1:      float (może być float('inf')).
+        mode:    'single' | 'compare' (keyword-only).
+
+    Returns:
+        pathlib.Path do utworzonego katalogu, lub None gdy raport pominięty
+        (opt-out env var SPHSIM_NO_REPORT=1 lub mkdir/render failure).
+
+    Side effects:
+        mkdir ./reports/<ts>/ + zapis 3 plików (report.md + 2 PNG).
+        Wszystkie wyjątki łapane — write_report nigdy nie rzuca do CLI.
+        Banner 'Raport zapisany do: ...' emitowany przez CALLER (na sys.stderr).
+    """
+    # ── Opt-out (Pitfall 4) ──
+    if os.environ.get('SPHSIM_NO_REPORT') == '1':
+        return None
+
+    # ── Exception isolation (Pitfall 6 — RESEARCH §C.7) ──
+    # Całe ciało otoczone try/except — report side-effect MUST NOT crash CLI.
+    try:
+        try:
+            report_dir = _resolve_report_dir()
+        except OSError as e:
+            print(f'[OSTRZEŻENIE] Nie udało się utworzyć katalogu raportu: {e}. '
+                  f'Raport pominięty.', file=sys.stderr)
+            return None
+
+        plot_res = _extract_plot_source(res, mode)
+
+        # Plot generation — defensive: catch ALL exceptions so report.md still writes
+        # nawet jeśli matplotlib z jakiegoś powodu się wywali (font issue, OOM, ...).
+        try:
+            plot_decision_distribution(
+                plot_res.get('ic_per_phase', {}),
+                plot_res.get('veto_per_phase', {}),
+                plot_res.get('abstain_per_phase', {}),
+                report_dir / 'decision_distribution.png',
+            )
+        except Exception as e:
+            print(f'[OSTRZEŻENIE] Błąd generowania decision_distribution.png: {e}. '
+                  f'Kontynuuję.', file=sys.stderr)
+        try:
+            plot_kpi_timeseries(
+                plot_res.get('history', {}),
+                args.T,
+                report_dir / 'kpi_timeseries.png',
+            )
+        except Exception as e:
+            print(f'[OSTRZEŻENIE] Błąd generowania kpi_timeseries.png: {e}. '
+                  f'Kontynuuję.', file=sys.stderr)
+
+        # Markdown — jeśli się nie zapisze, raport jest bezużyteczny; zwracamy None
+        # żeby caller NIE wypisał false-positive banner.
+        try:
+            md = render_report(args, res, params, K1, mode=mode)
+            (report_dir / 'report.md').write_text(md, encoding='utf-8')
+        except Exception as e:
+            print(f'[OSTRZEŻENIE] Błąd generowania raportu MD: {e}. '
+                  f'Raport niekompletny.', file=sys.stderr)
+            return None
+
+        return report_dir
+
+    except Exception as e:
+        # Last-resort catch — gdyby coś przeciekło (np. nieoczekiwany TypeError
+        # przy formatowaniu komunikatu wyżej). Nigdy nie pozwalamy report side-
+        # effect zabić CLI.
+        print(f'[OSTRZEŻENIE] Raport: {e}', file=sys.stderr)
+        return None
