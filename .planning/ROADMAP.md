@@ -257,14 +257,14 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Configurable environment | 5/5 | Complete   | 2026-05-27 |
 | 6. Report + plots generator | 6/6 | Complete   | 2026-05-28 |
 | 7. Batch runner + aggregation | 7/7 | Complete   | 2026-05-28 |
-| 8. Documentation + Interactive Tutorial | 5/8 | In Progress|  |
+| 8. Documentation + Interactive Tutorial | 7/8 | In Progress|  |
 
 ### Phase 8: Documentation + Interactive Tutorial
 
 **Goal:** Nowy użytkownik (student/prowadzący) bez znajomości projektu potrafi w ≤15 minut: (1) przeczytać polski przewodnik `docs/PRZEWODNIK.md` z opisem wszystkich CLI/REPL commands i flag, (2) uruchomić w REPL tryb `tutorial` (lub `python sph_sim.py --tutorial`) i przejść krok-po-kroku przez wszystkie zdolności v1.1 (strategies → custom → agent → env → report → batch) z opcją `skip` per krok, inspirowany scenariuszami z `scripts/uat_*.sh` / `verify_phase*.sh`
 **Requirements**: TUT-01, TUT-02, TUT-03, TUT-04, TUT-05, TUT-06, DOC-01, DOC-02, EX-01, GATE-01 (validation-level IDs from 08-VALIDATION.md — Phase 8 adds no new REQUIREMENTS.md REQ-IDs; exercises all 7 prior REQ categories via tutorial golden path + PRZEWODNIK examples)
 **Depends on:** Phase 7
-**Plans:** 5/8 plans executed
+**Plans:** 7/8 plans executed
 
 Plans:
 **Wave 0** *(scaffolding)*
@@ -283,8 +283,8 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion — two parallel plans, no file overlap)*
 
-- [ ] 08-05-PLAN.md — scripts/gen_tutorial_assets.sh (NEW) + docs/assets/decision_distribution_naive.png + kpi_timeseries_naive.png + batch_aggregate_naive.png (deterministic --seed 42 per D-14)
-- [ ] 08-06-PLAN.md — docs/PRZEWODNIK.md (NEW): Polish user guide, D-11 structure (Lead → Quickstart → Walkthrough → Reference → Theory), D-12 verbatim examples annotated `# Z 08-UAT.md test #N`, D-14 PNG embeds + matplotlib drift note
+- [x] 08-05-PLAN.md — scripts/gen_tutorial_assets.sh (NEW) + docs/assets/decision_distribution_naive.png + kpi_timeseries_naive.png + batch_aggregate_naive.png (deterministic --seed 42 per D-14)
+- [x] 08-06-PLAN.md — docs/PRZEWODNIK.md (NEW): Polish user guide, D-11 structure (Lead → Quickstart → Walkthrough → Reference → Theory), D-12 verbatim examples annotated `# Z 08-UAT.md test #N`, D-14 PNG embeds + matplotlib drift note
 
 **Wave 4** *(blocked on Wave 3 completion — final BLOCKING gate)*
 
