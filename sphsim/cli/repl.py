@@ -33,6 +33,8 @@ from sphsim.config import (
     DEFAULT_NU, DEFAULT_NSUS, DEFAULT_K0, DEFAULT_K1, DEFAULT_F,
     DEFAULT_T, DEFAULT_KAPPA, DEFAULT_ALPHA, DEFAULT_PHI, DEFAULT_RHO,
 )
+# Phase 6 REPORT-01/03: side-effect raport po do_run / do_compare; banner na stderr.
+from sphsim.report import write_report
 
 
 HISTORY_FILE = os.path.expanduser('~/.sphsim_history')
@@ -217,12 +219,18 @@ class SPHShell(cmd.Cmd):
         # D-41: format_human wymaga args-like Namespace (strategy/nU/nSUS/T/kappa/alpha/verbose).
         # no_agent=False: defensive consistency z format_json (Plan 03 T-04-20 mitigation).
         # phi/rho/K0/valuation/seed: wymagane przez format_config_header (ENV-03, Pitfall 2 fix).
+        # Phase 6 (Pitfall 6 defensive consistency): json=False, compare_agent=False
+        # — write_report + markdown.py używają tych atrybutów.
         fake_args = argparse.Namespace(
             strategy=name, nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, T=DEFAULT_T,
             kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA, verbose=False, no_agent=False,
             phi=DEFAULT_PHI, rho=DEFAULT_RHO, K0=DEFAULT_K0, valuation='window',
-            seed=42,
+            seed=42, json=False, compare_agent=False,
         )
+        # Phase 6 REPORT-01: side-effect raport po sukcesie sim.run().
+        report_dir = write_report(fake_args, res, params, DEFAULT_K1, mode='single')
+        if report_dir:
+            print(f'Raport zapisany do: {report_dir}/report.md', file=sys.stderr)
         print(format_human(fake_args, res, DEFAULT_K1, False))
 
     # ---- compare <name> [k=v ...] (D-61, AGENT-05) ----
@@ -284,13 +292,23 @@ class SPHShell(cmd.Cmd):
         # Render przez format_human → format_compare (Plan 03 dispatcher).
         # fake_args musi mieć no_agent=False (T-04-20 defensive consistency).
         # phi/rho/K0/valuation/seed: wymagane przez format_config_header (ENV-03, Pitfall 2 fix).
-        res_combined = {'comparison': comparison_block}
+        # Phase 6 PLOT-02: _with_agent_full carries history dla compare-mode PNG (RESEARCH §N.1).
+        res_combined = {
+            'comparison': comparison_block,
+            '_with_agent_full': res_with,
+        }
+        # Phase 6 (Pitfall 6 defensive consistency): json=False, compare_agent=True (explicit
+        # compare-mode marker dla markdown.py _render_strategy_params dispatch).
         fake_args = argparse.Namespace(
             strategy=name, nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, T=DEFAULT_T,
             kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA, verbose=False, no_agent=False,
             phi=DEFAULT_PHI, rho=DEFAULT_RHO, K0=DEFAULT_K0, valuation='window',
-            seed=42,
+            seed=42, json=False, compare_agent=True,
         )
+        # Phase 6 REPORT-03: side-effect raport porównawczy.
+        report_dir = write_report(fake_args, res_combined, params, DEFAULT_K1, mode='compare')
+        if report_dir:
+            print(f'Raport porównawczy zapisany do: {report_dir}/report.md', file=sys.stderr)
         print(format_human(fake_args, res_combined, DEFAULT_K1, False))
 
     # ---- default — nieznana komenda (D-30) ----

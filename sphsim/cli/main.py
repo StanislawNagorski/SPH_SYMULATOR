@@ -1,12 +1,17 @@
 # Entry point CLI — parse args, buduje SPHSimulator, run, formatuje wynik.
 # Phase 4: wrap_with_agent default-on (D-58), --no-agent escape hatch (D-59),
 #           --compare-agent tryb porównawczy via run_compare (D-60).
+# Phase 6: write_report orchestrator wired przy każdym sim.run()/run_compare();
+#          banner na sys.stderr (Pitfall 3 — --json stdout cleanliness).
+import sys
+
 from sphsim.cli.args import parse_args
 from sphsim.cli.output import format_human, format_json
 from sphsim.core.simulator import SPHSimulator
 from sphsim.strategies import STRATEGIES
 from sphsim.config import DEFAULT_K0, DEFAULT_F, DEFAULT_PHI, DEFAULT_RHO
 from sphsim.agent import wrap_with_agent
+from sphsim.report import write_report
 
 
 def run_compare(args, raw_strategy_fn, name, params, K1):
@@ -43,7 +48,10 @@ def run_compare(args, raw_strategy_fn, name, params, K1):
             'without_agent': {k: v for k, v in res_without.items() if k not in ('history', 'devices')},
             'delta':         {k: res_with[k] - res_without[k] for k in KPIS},
             'agent_helps':   res_with['avg_net_profit'] > res_without['avg_net_profit'],
-        }
+        },
+        # Phase 6 PLOT-02: pełny res_with (z history) dla compare-mode PNG; key
+        # prefixed underscore → format_json strippuje (RESEARCH §N.1).
+        '_with_agent_full': res_with,
     }
 
 
@@ -54,13 +62,14 @@ def main():
         run_repl()
         return
     # Graceful warning: --param działa tylko z --custom (D-39 Claude's Discretion).
+    # Phase 6: `sys` jest top-level import (linia 6) — usuwamy wcześniejsze lokalne
+    # `import sys` które shadowowały moduł i powodowały UnboundLocalError w gałęzi
+    # built-in single-run (write_report banner używa sys.stderr).
     if args.param and not args.custom:
-        import sys
         print('Flaga --param ignorowana — działa tylko z --custom.', file=sys.stderr)
 
     # === Early branch: custom strategy ===
     if args.custom:
-        import sys
         from sphsim.strategies.loader import load_custom, parse_params_from_meta, LoaderError
         try:
             name, strategy_fn, meta = load_custom(args.custom)
@@ -82,6 +91,10 @@ def main():
         # (d) Compare branch — early return, PRZED conditional wrap (step e).
         if args.compare_agent:
             res = run_compare(args, raw_strategy_fn, name, params, K1)
+            # Phase 6 REPORT-03: side-effect raport po sukcesie run_compare.
+            report_dir = write_report(args, res, params, K1, mode='compare')
+            if report_dir:
+                print(f'Raport porównawczy zapisany do: {report_dir}/report.md', file=sys.stderr)
             print(format_json(args, res, params, K1) if args.json else format_human(args, res, K1, args.verbose))
             return
 
@@ -98,6 +111,10 @@ def main():
             strategy_fn=strategy_fn, params=params, seed=args.seed,
         )
         res = sim.run()
+        # Phase 6 REPORT-01: side-effect raport po sukcesie sim.run().
+        report_dir = write_report(args, res, params, K1, mode='single')
+        if report_dir:
+            print(f'Raport zapisany do: {report_dir}/report.md', file=sys.stderr)
         if args.json:
             print(format_json(args, res, params, K1))
         else:
@@ -118,6 +135,10 @@ def main():
     # (d) Compare branch — early return, PRZED conditional wrap (step e).
     if args.compare_agent:
         res = run_compare(args, raw_strategy_fn, args.strategy, params, K1)
+        # Phase 6 REPORT-03: side-effect raport porównawczy.
+        report_dir = write_report(args, res, params, K1, mode='compare')
+        if report_dir:
+            print(f'Raport porównawczy zapisany do: {report_dir}/report.md', file=sys.stderr)
         print(format_json(args, res, params, K1) if args.json else format_human(args, res, K1, args.verbose))
         return
 
@@ -136,6 +157,10 @@ def main():
         params=params, seed=args.seed,
     )
     res = sim.run()
+    # Phase 6 REPORT-01: side-effect raport po sukcesie sim.run().
+    report_dir = write_report(args, res, params, K1, mode='single')
+    if report_dir:
+        print(f'Raport zapisany do: {report_dir}/report.md', file=sys.stderr)
 
     if args.json:
         print(format_json(args, res, params, K1))
