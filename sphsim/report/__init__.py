@@ -131,6 +131,13 @@ def write_report(args, res, params, K1, *, mode='single', report_dir_override=No
         # przez _resolve_report_dir collision-retry suffix.
         if report_dir_override is not None:
             report_dir = Path(report_dir_override)
+            # Phase 8 WR-06: reject empty/cwd override values at the boundary —
+            # Path('') / Path('.') silently write report.md into cwd because
+            # mkdir(parents=True, exist_ok=True) is a no-op for existing dirs.
+            if str(report_dir) in ('', '.'):
+                print(f'[OSTRZEŻENIE] report_dir_override pusty/cwd ({report_dir!r}) — '
+                      f'raport pominięty.', file=sys.stderr)
+                return None
             report_dir.mkdir(parents=True, exist_ok=True)
         else:
             try:
@@ -234,6 +241,12 @@ def write_batch_report(args, per_seed_results, aggregate, params, K1, seeds_list
         # caller może wielokrotnie wywołać dla tego samego batch step bez kolizji.
         if report_dir_override is not None:
             report_dir = Path(report_dir_override)
+            # Phase 8 WR-06: reject empty/cwd override values at the boundary —
+            # symmetric to write_report. See WR-06 fix there for rationale.
+            if str(report_dir) in ('', '.'):
+                print(f'[OSTRZEŻENIE] report_dir_override pusty/cwd ({report_dir!r}) — '
+                      f'raport batch pominięty.', file=sys.stderr)
+                return None
             report_dir.mkdir(parents=True, exist_ok=True)
         else:
             # mkdir with collision retry (-N suffix) — symmetric to _resolve_report_dir.

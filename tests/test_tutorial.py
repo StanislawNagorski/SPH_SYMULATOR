@@ -527,6 +527,35 @@ class TestTutorialReports(unittest.TestCase):
         finally:
             del os.environ['SPHSIM_NO_REPORT']
 
+    def test_wr06_empty_override_is_rejected(self):
+        """WR-06: write_report(report_dir_override=Path('')) returns None and does NOT
+        write report.md into cwd. Same for Path('.')."""
+        from sphsim.report import write_report
+        for bad in [Path(''), Path('.')]:
+            # cwd is self._tmpdir from setUp — nothing should land in it.
+            result = write_report(_make_args(), _make_single_res(), {'zeta': 0.5},
+                                  120.0, mode='single', report_dir_override=bad)
+            self.assertIsNone(result,
+                              msg=f"empty/cwd override should yield None, got {result!r}")
+            self.assertFalse(Path('report.md').exists(),
+                             msg=f"report.md leaked into cwd via override={bad!r}")
+
+    def test_wr06_empty_override_is_rejected_batch(self):
+        """WR-06 (batch): write_batch_report(report_dir_override=Path('')) returns None."""
+        from sphsim.report import write_batch_report
+        from sphsim.batch.stats import aggregate_kpis
+        per_seed = _make_per_seed_results(3)
+        aggregate = aggregate_kpis(per_seed)
+        args = _make_args(batch=True, seeds=[1, 2, 3], expected_P=100.0,
+                          json=False, verbose=False)
+        for bad in [Path(''), Path('.')]:
+            result = write_batch_report(args, per_seed, aggregate, {'zeta': 0.75},
+                                        120.0, [1, 2, 3], report_dir_override=bad)
+            self.assertIsNone(result,
+                              msg=f"empty/cwd batch override should yield None, got {result!r}")
+            self.assertFalse(Path('report.md').exists(),
+                             msg=f"batch report.md leaked into cwd via override={bad!r}")
+
     # ── D-10 write_batch_report unit tests (plan 08-01, Task 2) ────────────
 
     def test_batch_report_dir_override_creates_path_and_writes_files(self):
