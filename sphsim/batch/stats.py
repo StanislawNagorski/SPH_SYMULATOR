@@ -14,7 +14,9 @@ avg_providers_l100). Plan 07-04 (raport) odczytuje tę kolejność.
 Edge cases:
   - N=0 → ValueError z polskim komunikatem ("pusta lista — nic do agregowania")
   - N=1 → std=0.0, ci_lower=None, ci_upper=None (guard PRZED np.std(ddof=1), by uniknąć RuntimeWarning)
-  - N≥2 → pełne mean/std/min/max + 95% CI via scipy.stats.t.interval
+  - N≥2, sem>0 → pełne mean/std/min/max + 95% CI via scipy.stats.t.interval
+  - N≥2, sem=0 (wszystkie wartości identyczne) → ci_lower=ci_upper=mean (CI degeneruje do punktu;
+    zapobiega NaN-flooding z scipy.stats.t.interval(scale=0))
 """
 from dataclasses import dataclass
 from typing import Optional
@@ -113,9 +115,17 @@ def aggregate_kpis(per_seed_kpis: list[dict[str, float]]) -> dict[str, Aggregate
         else:
             std = float(values.std(ddof=1))
             sem = std / np.sqrt(n)
-            ci_lower_np, ci_upper_np = st.t.interval(0.95, df=n - 1, loc=mean, scale=sem)
-            ci_lower = float(ci_lower_np)
-            ci_upper = float(ci_upper_np)
+            if sem == 0.0:
+                # Zero-variance edge: wszystkie N≥2 wartości identyczne → sem=0.
+                # scipy.stats.t.interval(0.95, df, loc, scale=0) zwraca (NaN, NaN).
+                # CI degeneruje do punktu (mean, mean) — matematycznie poprawne
+                # i nie psuje dataclass equality (NaN != NaN, więc TestStatsDeterminism by failnął).
+                ci_lower = mean
+                ci_upper = mean
+            else:
+                ci_lower_np, ci_upper_np = st.t.interval(0.95, df=n - 1, loc=mean, scale=sem)
+                ci_lower = float(ci_lower_np)
+                ci_upper = float(ci_upper_np)
 
         result[kpi] = AggregateStat(
             mean=mean,
