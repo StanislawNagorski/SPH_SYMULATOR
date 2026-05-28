@@ -35,9 +35,32 @@ class TestPrzewodnik(unittest.TestCase):
 class TestAssets(unittest.TestCase):
     """DOC-02: docs/assets/*.png istnieją i mają prawidłową sygnaturę PNG."""
 
-    @unittest.skip("Wave 3 — plan 08-05 generates docs/assets/*.png")
-    def test_assets_pngs_present_and_valid(self):
-        self.fail("not yet implemented — see skip reason")
+    def _check_png(self, filename):
+        path = os.path.join(_PROJECT_ROOT, 'docs', 'assets', filename)
+        self.assertTrue(
+            os.path.exists(path),
+            msg=f'{filename} missing in docs/assets/',
+        )
+        with open(path, 'rb') as f:
+            header = f.read(8)
+        self.assertEqual(
+            header, PNG_MAGIC,
+            msg=f'{filename} is not a valid PNG (header={header!r})',
+        )
+        size = os.path.getsize(path)
+        self.assertGreater(
+            size, 1024,
+            msg=f'{filename} is suspiciously small ({size} bytes)',
+        )
+
+    def test_decision_distribution_png(self):
+        self._check_png('decision_distribution_naive.png')
+
+    def test_kpi_timeseries_png(self):
+        self._check_png('kpi_timeseries_naive.png')
+
+    def test_batch_aggregate_png(self):
+        self._check_png('batch_aggregate_naive.png')
 
 
 class TestExamplesAudit(unittest.TestCase):
