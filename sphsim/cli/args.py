@@ -138,7 +138,12 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )
-    mutex = p.add_mutually_exclusive_group(required=True)
+    # Phase 8 (Plan 08-02): required=False — `--tutorial` is intentionally outside
+    # this group (analog do `--batch`) and argparse enforces required=True BEFORE
+    # post-parse code runs, which would leak the English "one of the arguments ...
+    # is required" fallback for `python sph_sim.py --tutorial` alone. The Polish
+    # post-parse `Musisz podać jeden z trybów:` replaces that contract.
+    mutex = p.add_mutually_exclusive_group(required=False)
     mutex.add_argument('--interactive', action='store_true',
                        help='Uruchom tryb interaktywny (REPL)')
     mutex.add_argument('--strategy', choices=list(BUILTIN_STRATEGIES),
@@ -167,13 +172,16 @@ def parse_args():
     p.add_argument('--rho',  type=_parse_rho_list, default=DEFAULT_RHO,
                    metavar='r1,..,r5',
                    help='Koszty naprawy ρ (5 liczb ≥ 0, def: 0.5,0.5,0.7,1.5,3.0)')
-    # Phase 7 BATCH-01: --batch + --seeds. INTENTIONALLY free-standing (NOT in any
-    # add_mutually_exclusive_group) so the Phase-7 post-parse Polish p.error fires
+    # Phase 7 BATCH-01 + Phase 8 (Plan 08-02) TUT-05:
+    # --batch, --seeds, --tutorial — INTENTIONALLY free-standing (NOT in any
+    # add_mutually_exclusive_group) so the post-parse Polish p.error fires
     # BEFORE argparse's English fallback (Warning #8 mitigation).
     p.add_argument('--batch', action='store_true',
                    help='Tryb batch — uruchom strategię N razy na różnych seedach (wymaga --seeds)')
     p.add_argument('--seeds', type=_parse_seeds_list, default=None, metavar='N|lista',
                    help='Lista seedów: N (1..N) lub jawna (1,5,42). Działa tylko z --batch.')
+    p.add_argument('--tutorial', action='store_true',
+                   help='Uruchom interaktywny tutorial v1.1 (≤15 min)')
     p.add_argument('--valuation', choices=['window', 'step', 'linear'], default='window',
                    help='Preset funkcji waluacji g(u): window (v1.0 default) | step | linear')
     p.add_argument('--T',    type=int,   default=DEFAULT_T,     help=f'Liczba cykli (def {DEFAULT_T})')
@@ -187,6 +195,11 @@ def parse_args():
     p.add_argument('--compare-agent', action='store_true',
                    help='Uruchom 2x: z agentem i bez — tabela delta KPI')
     args = p.parse_args()
+    # Phase 8 (Plan 08-02) — Polish required-mode check (replaces argparse English
+    # fallback po obniżeniu mutex group do required=False; --tutorial jest
+    # dopuszczalnym alternatywnym trybem poza mutex group).
+    if not (args.interactive or args.strategy or args.custom or args.batch or args.tutorial):
+        p.error("Musisz podać jeden z trybów: --interactive, --strategy, --custom, --batch lub --tutorial.")
     # Post-parse mutex checks (D-60) — twarde błędy z polskim komunikatem.
     if args.compare_agent and args.no_agent:
         p.error("Flagi --compare-agent i --no-agent są wzajemnie wykluczające.")
@@ -199,6 +212,17 @@ def parse_args():
         p.error("Flagi --batch i --compare-agent są wzajemnie wykluczające.")
     if args.batch and args.interactive:
         p.error("Flaga --batch nie działa w trybie --interactive (użyj komendy `batch` w REPL).")
+    # Phase 8 (Plan 08-02) TUT-05 — 5-way tutorial mutex (verbatim per PATTERNS.md).
+    if args.tutorial and args.interactive:
+        p.error("Flagi --tutorial i --interactive są wzajemnie wykluczające.")
+    if args.tutorial and getattr(args, 'strategy', None):
+        p.error("Flaga --tutorial nie działa z --strategy (użyj trybu tutorial interaktywnie).")
+    if args.tutorial and args.custom:
+        p.error("Flaga --tutorial nie działa z --custom.")
+    if args.tutorial and args.batch:
+        p.error("Flagi --tutorial i --batch są wzajemnie wykluczające.")
+    if args.tutorial and args.compare_agent:
+        p.error("Flagi --tutorial i --compare-agent są wzajemnie wykluczające.")
     if args.batch and args.seeds is None:
         p.error("Flaga --batch wymaga --seeds N lub --seeds lista (np. 1,5,42).")
     if args.seeds is not None and not args.batch:
