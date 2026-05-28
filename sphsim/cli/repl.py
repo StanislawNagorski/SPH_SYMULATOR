@@ -279,6 +279,10 @@ class SPHShell(cmd.Cmd):
     # ---- run <name> [k=v ...] (D-41/D-42/D-50) ----
     def do_run(self, arg):
         """Uruchom symulację: run <nazwa> [param=wartość ...]"""
+        # Phase 8 Pitfall 3: reset _last_sim_result na początku — zapobiega
+        # double-trigger postcmd jeśli wcześniejsza komenda już go ustawiła.
+        self._last_sim_result = None
+
         tokens = arg.split()
         if not tokens:
             # D-42 verbatim
@@ -317,6 +321,8 @@ class SPHShell(cmd.Cmd):
             strategy_fn=strategy_fn, params=params, seed=42,
         )
         res = sim.run()
+        # Phase 8 (TUT-06): capture result dla postcmd check_step.
+        self._last_sim_result = res
 
         # D-41: format_human wymaga args-like Namespace (strategy/nU/nSUS/T/kappa/alpha/verbose).
         # no_agent=False: defensive consistency z format_json (Plan 03 T-04-20 mitigation).
@@ -329,8 +335,16 @@ class SPHShell(cmd.Cmd):
             phi=DEFAULT_PHI, rho=DEFAULT_RHO, K0=DEFAULT_K0, valuation='window',
             seed=42, json=False, compare_agent=False,
         )
+        # Phase 8 D-10: tutorial reports → ./reports/tutorial-<ts>/step-N-<topic>/
+        # Override jest None gdy tutorial nie active (backwards-compat preserved).
+        override = None
+        if self._tutorial_state is not None:
+            topic = STEP_TOPICS.get(self._tutorial_state.step)
+            if topic:
+                override = self._tutorial_state.step_report_dir(topic)
         # Phase 6 REPORT-01: side-effect raport po sukcesie sim.run().
-        report_dir = write_report(fake_args, res, params, DEFAULT_K1, mode='single')
+        report_dir = write_report(fake_args, res, params, DEFAULT_K1, mode='single',
+                                  report_dir_override=override)
         if report_dir:
             print(f'Raport zapisany do: {report_dir}/report.md', file=sys.stderr)
         print(format_human(fake_args, res, DEFAULT_K1, False))
@@ -338,6 +352,9 @@ class SPHShell(cmd.Cmd):
     # ---- compare <name> [k=v ...] (D-61, AGENT-05) ----
     def do_compare(self, arg):
         """Porównaj strategię z i bez RationalAgent: compare <nazwa> [param=wartość ...]"""
+        # Phase 8 Pitfall 3: reset _last_sim_result na początku.
+        self._last_sim_result = None
+
         tokens = arg.split()
         if not tokens:
             # D-61 — komunikat identyczny w stylu do do_run D-42.
@@ -399,6 +416,8 @@ class SPHShell(cmd.Cmd):
             'comparison': comparison_block,
             '_with_agent_full': res_with,
         }
+        # Phase 8 (TUT-06): capture combined result dla postcmd check_step (step 5 compare).
+        self._last_sim_result = res_combined
         # Phase 6 (Pitfall 6 defensive consistency): json=False, compare_agent=True (explicit
         # compare-mode marker dla markdown.py _render_strategy_params dispatch).
         # Phase 7 (Pitfall 7 defensive consistency): expected_P=params.get(...) — choć compare
@@ -411,8 +430,15 @@ class SPHShell(cmd.Cmd):
             seed=42, json=False, compare_agent=True,
             expected_P=params.get('expected_P', DEFAULT_K0),
         )
+        # Phase 8 D-10: tutorial reports → ./reports/tutorial-<ts>/step-N-<topic>/
+        override = None
+        if self._tutorial_state is not None:
+            topic = STEP_TOPICS.get(self._tutorial_state.step)
+            if topic:
+                override = self._tutorial_state.step_report_dir(topic)
         # Phase 6 REPORT-03: side-effect raport porównawczy.
-        report_dir = write_report(fake_args, res_combined, params, DEFAULT_K1, mode='compare')
+        report_dir = write_report(fake_args, res_combined, params, DEFAULT_K1, mode='compare',
+                                  report_dir_override=override)
         if report_dir:
             print(f'Raport porównawczy zapisany do: {report_dir}/report.md', file=sys.stderr)
         print(format_human(fake_args, res_combined, DEFAULT_K1, False))
@@ -420,6 +446,9 @@ class SPHShell(cmd.Cmd):
     # ---- batch <name> --seeds N|lista [k=v ...] (Phase 7 BATCH-01, RESEARCH §C.5) ----
     def do_batch(self, arg):
         """Uruchom strategię na wielu seedach: batch <nazwa> --seeds N|lista [param=wartość ...]"""
+        # Phase 8 Pitfall 3: reset _last_sim_result na początku.
+        self._last_sim_result = None
+
         tokens = arg.split()
         if not tokens:
             # Mirror do_run/do_compare empty-arg style; jedna polska linia użycia.
@@ -498,8 +527,17 @@ class SPHShell(cmd.Cmd):
 
         raw_strategy_fn = STRATEGIES[name]
         per_seed_results, aggregate = run_batch(fake_args, raw_strategy_fn, params, DEFAULT_K1)
+        # Phase 8 (TUT-06): capture aggregate dla postcmd check_step (step 8 batch).
+        self._last_sim_result = {'aggregate': aggregate, 'per_seed': per_seed_results}
+        # Phase 8 D-10: tutorial reports → ./reports/tutorial-<ts>/step-N-<topic>/
+        override = None
+        if self._tutorial_state is not None:
+            topic = STEP_TOPICS.get(self._tutorial_state.step)
+            if topic:
+                override = self._tutorial_state.step_report_dir(topic)
         report_dir = write_batch_report(fake_args, per_seed_results, aggregate, params,
-                                        DEFAULT_K1, seeds_list)
+                                        DEFAULT_K1, seeds_list,
+                                        report_dir_override=override)
         if report_dir:
             print(f'Raport batchowy zapisany do: {report_dir}/report.md', file=sys.stderr)
         print(format_batch_summary(fake_args, aggregate, DEFAULT_K1))
