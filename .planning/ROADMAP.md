@@ -215,8 +215,32 @@ Plans:
   4. Batch działa z `RationalAgent` (default) i `--no-agent` (dla porównań statystycznych)
   5. Batch report jasno wskazuje czy strategia bije baseline `naive --zeta 0.75` (czy 95% CI dla `avg_val_last100` jest powyżej 92)
 
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 7 plans
+Plans:
+**Wave 0** *(scaffolding)*
+
+- [ ] 07-00-PLAN.md — Wave 0 scaffolding: test stubs (test_batch + test_batch_stats + test_batch_report) + requirements.txt (matplotlib/numpy/scipy)
+
+**Wave 1** *(blocked on Wave 0 completion)*
+
+- [ ] 07-01-PLAN.md — BATCH-02: sphsim/batch/stats.py (aggregate_kpis + AggregateStat + KPIS) + TestAggregateKpis/TestCIComputation/TestN1Degenerate/TestEmptyInput/TestStatsDeterminism (9 tests green)
+- [ ] 07-02-PLAN.md — BATCH-01 CLI: sphsim/cli/args.py _parse_seeds_list (MAX_SEEDS=1000 cap) + --batch/--seeds flags + 4-way post-parse mutex + TestSeedsParser/TestArgsMutex (11 tests green)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 07-03-PLAN.md — BATCH-01 orchestrator: sphsim/batch/runner.py (N×SPHSimulator loop) + sphsim/cli/main.py 2× early branches + sphsim/cli/output.py::format_batch_summary + TestDeterminism (2 tests green)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 07-04-PLAN.md — BATCH-03 + PLOT-04: sphsim/report/batch_markdown.py + sphsim/report/plots.py::plot_batch_aggregate + sphsim/report/__init__.py::write_batch_report + main.py wiring + TestBatchReport/TestBatchPlots (6 tests green)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 07-05-PLAN.md — BATCH-01 REPL: sphsim/cli/repl.py SPHShell.do_batch + do_help update + CLI/REPL parity + TestReplBatch/TestCliReplParity (3 tests green)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 07-06-PLAN.md — verify_phase7.sh phase exit gate (5 ROADMAP SCs + 4 REQ-IDs + regression PASS=8/8 + REPL Pitfalls + opt-out — ≥30 check() invocations) + STATE/ROADMAP closeout
 
 ## Progress
 
@@ -231,4 +255,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 4. Rational Agent veto layer | 7/7 | Complete   | 2026-05-27 |
 | 5. Configurable environment | 5/5 | Complete   | 2026-05-27 |
 | 6. Report + plots generator | 6/6 | Complete   | 2026-05-28 |
-| 7. Batch runner + aggregation | 0/TBD | Not started | - |
+| 7. Batch runner + aggregation | 0/7 | Executing | - |
