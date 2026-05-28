@@ -57,6 +57,15 @@ def run_compare(args, raw_strategy_fn, name, params, K1):
 
 def main():
     args = parse_args()
+    # Phase 8 (Plan 08-02) TUT-05 — 4th early branch dla --tutorial.
+    # Forward reference: run_repl(start_in_tutorial=True) signature lands w Plan 08-04.
+    # At Wave 1 invoking `--tutorial` end-to-end raises TypeError at runtime; argparse
+    # layer is independently verifiable (tests/test_tutorial.py::TestTutorialCLI 8 testów).
+    # Deferred import mirrors --interactive branch (NOT hoist do module level).
+    if args.tutorial:
+        from sphsim.cli.repl import run_repl
+        run_repl(start_in_tutorial=True)
+        return
     if args.interactive:
         from sphsim.cli.repl import run_repl
         run_repl()
