@@ -198,3 +198,60 @@ def format_human(args, res, K1, verbose):
                          f"prov={h['providers'][idx]:4d}  SUS={h['sus'][idx]:3d}")
     lines.append("")
     return "\n".join(lines)
+
+
+def format_batch_summary(args, aggregate, K1) -> str:
+    """Phase 7 BATCH-01: krótkie podsumowanie agregatu na stdout (banner + 5 KPI rows + werdykt).
+
+    Werdykt baseline-beating reads BASELINE_PATH (Phase 6 single source of truth)
+    — zero hardcoded baseline literals (per RESEARCH §A.1, BLOCKER #1).
+    K1 zachowane dla symetrii API; obecnie nieużywane.
+
+    Args:
+        args:      argparse.Namespace — wymagane pola: strategy.
+        aggregate: dict[str, AggregateStat] z aggregate_kpis (5 kluczy z KPIS).
+        K1:        próg waluacji konsumentów (placeholder dla symetrii z format_compare).
+
+    Returns:
+        Multi-line string: banner '=== BATCH SUMMARY ===' + 5 KPI rows (mean/std/CI)
+        + 'Werdykt' line (baseline-beating verdict driven by BASELINE_PATH).
+    """
+    # Deferred imports — unika top-level circular (output.py → batch.stats → ... → cli)
+    # AND defers BASELINE_PATH filesystem read do call-time (testowalne fallback).
+    from sphsim.batch.stats import KPIS
+    from sphsim.report.markdown import BASELINE_PATH
+    import json
+    try:
+        baseline_avg = json.loads(BASELINE_PATH.read_text(encoding="utf-8"))["metrics"]["avg_val_last100"]
+    except (FileNotFoundError, KeyError, ValueError):
+        # Jawny fallback — NIGDY nie substytujemy magic-number'em (BLOCKER #1).
+        baseline_avg = None
+
+    lines = [
+        f"=== BATCH SUMMARY — strategia '{args.strategy}' × N={aggregate['avg_val_last100'].n} seedów ===",
+    ]
+    for kpi in KPIS:
+        stat = aggregate[kpi]
+        fmt = '{:.2%}' if kpi == 'delivery_ratio' else '{:.2f}'
+        if stat.ci_lower is None:
+            lines.append(f"  {kpi:<22} mean={fmt.format(stat.mean):>10}  std=n/a (N=1)")
+        else:
+            ci = f'({fmt.format(stat.ci_lower)}, {fmt.format(stat.ci_upper)})'
+            lines.append(
+                f"  {kpi:<22} mean={fmt.format(stat.mean):>10}  "
+                f"std={fmt.format(stat.std):>10}  95% CI={ci}"
+            )
+
+    val_stat = aggregate['avg_val_last100']
+    if val_stat.ci_lower is not None and baseline_avg is not None and val_stat.ci_lower > baseline_avg:
+        verdict_line = f"✓ BIJE baseline (CI_lower > {baseline_avg:.1f})"
+    elif baseline_avg is None:
+        verdict_line = "⚠ Werdykt baseline niedostępny (brak fixture)"
+    elif val_stat.ci_lower is not None:
+        verdict_line = f"✗ NIE bije baseline (CI_lower ≤ {baseline_avg:.1f})"
+    elif val_stat.mean > baseline_avg:
+        verdict_line = f"✓ TAK (N=1, single-point > {baseline_avg:.1f})"
+    else:
+        verdict_line = f"✗ NIE (N=1, single-point ≤ {baseline_avg:.1f})"
+    lines.append(f"  Werdykt: {verdict_line}")
+    return '\n'.join(lines)
