@@ -42,9 +42,14 @@ from generate_baseline import INVOCATIONS, PROJECT_ROOT, FIXTURES_DIR, MONOLITH 
 # (K0, phi, rho, seed, valuation) ignorowane przy compare z baseline_v1 fixtures —
 # fixtures są oracle dla zachowania v1.0 i nie zawierają tych pól. Pola obecne
 # tylko w actual output po Plan 03 rozszerzeniu format_json env block.
+# Phase 6 (Strategia B, mirror Phase 4 D-67 + Phase 5 D-PH5): nowy klucz
+# 'abstain_per_phase' (dict per-phase ABSTAIN counts) ignorowany przy compare —
+# fixtures baseline_v1 są oracle dla v1.0 i nie zawierają tego pola. Pole obecne
+# tylko w actual output po Plan 01 rozszerzeniu simulator.run() return dict.
 SKIP_KEYS = (
     'veto_per_phase', 'n_vetoed_total', 'agent_enabled',  # Phase 4 D-67 Strategia B
     'K0', 'phi', 'rho', 'seed', 'valuation',              # Phase 5 ENV-03 (D-PH5 SKIP-EXT, mirroring D-67)
+    'abstain_per_phase',                                  # Phase 6 PLOT-01 (D-PH6 SKIP-EXT, mirroring D-67)
 )
 
 
