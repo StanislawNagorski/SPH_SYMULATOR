@@ -39,6 +39,7 @@ from sphsim.cli.output import format_human
 from sphsim.config import (
     DEFAULT_NU, DEFAULT_NSUS, DEFAULT_K0, DEFAULT_K1, DEFAULT_F,
     DEFAULT_T, DEFAULT_KAPPA, DEFAULT_ALPHA, DEFAULT_PHI, DEFAULT_RHO,
+    DEFAULT_EXPECTED_P,
 )
 # Phase 6 REPORT-01/03: side-effect raport po do_run / do_compare; banner na stderr.
 from sphsim.report import write_report
@@ -322,7 +323,9 @@ class SPHShell(cmd.Cmd):
 
         # D-58: agent default-on w REPL run. Opakowuje strategię przed budową SPHSimulator.
         # expected_P pochodzi z params dict (D-54 — wspólne źródło prawdy dla incentive + agenta).
-        strategy_fn = wrap_with_agent(STRATEGIES[name], params.get('expected_P', DEFAULT_K0))
+        # Phase 8 WR-02: fallback to DEFAULT_EXPECTED_P (mirrors argparse default 100.0),
+        # NOT DEFAULT_K0 — they happen to coincide today but are semantically distinct.
+        strategy_fn = wrap_with_agent(STRATEGIES[name], params.get('expected_P', DEFAULT_EXPECTED_P))
 
         # D-41: build SPHSimulator z DEFAULT_* env params (Phase 5 doda override).
         # Seed=42 hardcoded dla determinizmu w sesji REPL'a.
@@ -393,8 +396,9 @@ class SPHShell(cmd.Cmd):
             return
 
         # D-54: expected_P pochodzi z params dict (wspólne źródło prawdy).
+        # Phase 8 WR-02: fallback to DEFAULT_EXPECTED_P, not DEFAULT_K0.
         raw_strategy_fn = STRATEGIES[name]
-        expected_P = params.get('expected_P', DEFAULT_K0)
+        expected_P = params.get('expected_P', DEFAULT_EXPECTED_P)
 
         # D-61: oba run'y z tym samym seed=42 (Claude's Discretion — determinizm porównania).
         common = dict(
@@ -440,7 +444,7 @@ class SPHShell(cmd.Cmd):
             kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA, verbose=False, no_agent=False,
             phi=DEFAULT_PHI, rho=DEFAULT_RHO, K0=DEFAULT_K0, valuation='window',
             seed=42, json=False, compare_agent=True,
-            expected_P=params.get('expected_P', DEFAULT_K0),
+            expected_P=params.get('expected_P', DEFAULT_EXPECTED_P),
         )
         # Phase 8 D-10: tutorial reports → ./reports/tutorial-<ts>/step-N-<topic>/
         override = None
@@ -519,8 +523,8 @@ class SPHShell(cmd.Cmd):
 
         # fake_args — ALL fields wymagane przez write_batch_report / render_batch_report /
         # format_config_header / format_batch_summary / run_batch (PATTERNS §4 field audit).
-        # Pitfall 7 (D-54 propagation): expected_P z params.get fallback do DEFAULT_K0 — NIE
-        # hardcode'ujemy 100.0, żeby custom strategie deklarujące expected_P w meta propagowały.
+        # Pitfall 7 (D-54 propagation): expected_P z params.get fallback do DEFAULT_EXPECTED_P
+        # (WR-02 fix) — custom strategie deklarujące expected_P w meta propagują naturalnie.
         fake_args = argparse.Namespace(
             strategy=name, nU=DEFAULT_NU, nSUS=DEFAULT_NSUS, T=DEFAULT_T,
             kappa=DEFAULT_KAPPA, alpha=DEFAULT_ALPHA, verbose=False, no_agent=False,
@@ -529,7 +533,8 @@ class SPHShell(cmd.Cmd):
             # Phase 7 additions:
             batch=True,
             seeds=seeds_list,
-            expected_P=params.get('expected_P', DEFAULT_K0),
+            # Phase 8 WR-02: fallback to DEFAULT_EXPECTED_P (payment), not DEFAULT_K0 (threshold).
+            expected_P=params.get('expected_P', DEFAULT_EXPECTED_P),
         )
 
         # Deferred imports — single source of truth z CLI path (main.py:93-101).

@@ -11,3 +11,7 @@ DEFAULT_KAPPA = 0.25
 DEFAULT_ALPHA = 1
 DEFAULT_PHI   = [0.1, 0.2, 0.3, 0.4, 1.0]
 DEFAULT_RHO   = [0.5, 0.5, 0.7, 1.5, 3.0]
+# Expected payment fallback used by REPL when params dict does not declare expected_P.
+# Mirrors argparse default for --expected_P in sphsim/cli/args.py (100.0). Semantically
+# distinct from DEFAULT_K0 (valuation threshold) — see Phase 8 WR-02.
+DEFAULT_EXPECTED_P = 100.0
