@@ -74,6 +74,7 @@ class SPHSimulator:
                     dev.down_left = 1
                 else:  # 'ABSTAIN' lub nieznany decision — failsafe (T-04-04)
                     dev.n_abstain += 1
+                    dev.abstain_phase_stats[dev.phase] = dev.abstain_phase_stats.get(dev.phase, 0) + 1  # Phase 6 PLOT-01
                     dev.status = 'DOWN'
                     dev.down_left = 1
 
@@ -152,6 +153,12 @@ class SPHSimulator:
                 veto_per_phase[ph] = veto_per_phase.get(ph, 0) + count
                 n_vetoed_total += count
 
+        # Aggregate per-phase ABSTAIN stats across all devices (Phase 6 PLOT-01)
+        abstain_per_phase = {}
+        for dev in self.devices:
+            for ph, count in dev.abstain_phase_stats.items():
+                abstain_per_phase[ph] = abstain_per_phase.get(ph, 0) + count
+
         return {
             'avg_val_last100':    round(sum(self.history['val'][last100]) / 100, 4),
             'cum_val_total':      round(total_val, 2),
@@ -162,6 +169,7 @@ class SPHSimulator:
             'ic_per_phase':       ic_results,
             'veto_per_phase':     veto_per_phase,
             'n_vetoed_total':     n_vetoed_total,
+            'abstain_per_phase':  abstain_per_phase,   # Phase 6 PLOT-01 (mirror veto_per_phase)
             'history':            self.history,
             'devices':            self.devices,
         }
