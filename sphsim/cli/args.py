@@ -69,6 +69,69 @@ def _parse_rho_list(s: str) -> list:
     return vals
 
 
+# Phase 7 — DoS prevention cap (T-7-02-01). Applied to BOTH grammar branches:
+# single-N (--seeds N → range(1, N+1)) AND comma-list (post-dedup length check).
+# 1000 seeds × ~150ms ≈ 150s — generous upper bound for legitimate research
+# while preventing accidental OOM from a typo like '--seeds 9999999'.
+MAX_SEEDS = 1000
+
+
+def _parse_seeds_list(s: str) -> list:
+    """Konwertuje '--seeds N' (1..N) lub '--seeds n1,n2,...' (jawna lista) na list[int] (BATCH-01).
+
+    Grammar (RESEARCH §B.3, lock v1):
+        '10'           → [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]   (single positive int → range)
+        '1,5,42,100'   → [1, 5, 42, 100]                   (comma list, preserve order)
+        '1,1,2,1'      → [1, 2]                            (dedup, preserve first occurrence)
+        '42'           → [42]                              (single int = list of one)
+        '0', '-5'      → ArgumentTypeError                 (reject — must be positive)
+        '', 'abc'      → ArgumentTypeError                 (reject — empty / non-numeric)
+        '1.5'          → ArgumentTypeError                 (reject — int() fails on float-string)
+        '1..10'        → ArgumentTypeError                 (reject — range syntax is v2 feature)
+        '1001'+        → ArgumentTypeError                 (reject — DoS cap MAX_SEEDS=1000)
+
+    Used by argparse `type=` on `--seeds` and reused by REPL command parser (Plan 07-05).
+    """
+    s = s.strip()
+    if not s:
+        raise argparse.ArgumentTypeError(
+            "Pusta wartość --seeds. Podaj N (np. --seeds 10) lub listę (np. --seeds 1,5,42).")
+    if ',' in s:
+        try:
+            raw = [int(x.strip()) for x in s.split(',')]
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                f"Nieprawidłowy format --seeds: '{s}'. Oczekiwano listy integerów (np. 1,5,42).")
+        if any(v <= 0 for v in raw):
+            raise argparse.ArgumentTypeError(
+                f"--seeds: wszystkie wartości muszą być dodatnie (> 0); podano: {raw}.")
+        seen = set()
+        result = []
+        for v in raw:
+            if v not in seen:
+                seen.add(v)
+                result.append(v)
+        if len(result) > MAX_SEEDS:
+            raise argparse.ArgumentTypeError(
+                f"--seeds: lista ma {len(result)} elementów (po deduplikacji), limit {MAX_SEEDS}.")
+        return result
+    else:
+        try:
+            n = int(s)
+        except ValueError:
+            raise argparse.ArgumentTypeError(
+                f"Nieprawidłowy format --seeds: '{s}'. "
+                "Oczekiwano N (np. --seeds 10) lub listy (np. --seeds 1,5,42).")
+        if n <= 0:
+            raise argparse.ArgumentTypeError(
+                f"--seeds: N musi być dodatnie (> 0); podano: {n}.")
+        if n > MAX_SEEDS:
+            raise argparse.ArgumentTypeError(
+                f"--seeds: N={n} przekracza limit {MAX_SEEDS} (zapobieganie OOM). "
+                f"Dla większych eksperymentów uruchom kilka mniejszych batchy.")
+        return list(range(1, n + 1))
+
+
 def parse_args():
     p = argparse.ArgumentParser(
         description='SPH Symulator — testuj strategię rekomendacji COMMIT/ABSTAIN',
@@ -104,6 +167,13 @@ def parse_args():
     p.add_argument('--rho',  type=_parse_rho_list, default=DEFAULT_RHO,
                    metavar='r1,..,r5',
                    help='Koszty naprawy ρ (5 liczb ≥ 0, def: 0.5,0.5,0.7,1.5,3.0)')
+    # Phase 7 BATCH-01: --batch + --seeds. INTENTIONALLY free-standing (NOT in any
+    # add_mutually_exclusive_group) so the Phase-7 post-parse Polish p.error fires
+    # BEFORE argparse's English fallback (Warning #8 mitigation).
+    p.add_argument('--batch', action='store_true',
+                   help='Tryb batch — uruchom strategię N razy na różnych seedach (wymaga --seeds)')
+    p.add_argument('--seeds', type=_parse_seeds_list, default=None, metavar='N|lista',
+                   help='Lista seedów: N (1..N) lub jawna (1,5,42). Działa tylko z --batch.')
     p.add_argument('--valuation', choices=['window', 'step', 'linear'], default='window',
                    help='Preset funkcji waluacji g(u): window (v1.0 default) | step | linear')
     p.add_argument('--T',    type=int,   default=DEFAULT_T,     help=f'Liczba cykli (def {DEFAULT_T})')
@@ -122,4 +192,15 @@ def parse_args():
         p.error("Flagi --compare-agent i --no-agent są wzajemnie wykluczające.")
     if args.compare_agent and args.interactive:
         p.error("Flaga --compare-agent nie działa w trybie --interactive.")
+    # Phase 7 mutex: post-parse p.error → Polish message fires before any top-level
+    # argparse English fallback (Warning #8 mitigation). --batch is NOT in any
+    # add_mutually_exclusive_group, so these four Polish checks always run.
+    if args.batch and args.compare_agent:
+        p.error("Flagi --batch i --compare-agent są wzajemnie wykluczające.")
+    if args.batch and args.interactive:
+        p.error("Flaga --batch nie działa w trybie --interactive (użyj komendy `batch` w REPL).")
+    if args.batch and args.seeds is None:
+        p.error("Flaga --batch wymaga --seeds N lub --seeds lista (np. 1,5,42).")
+    if args.seeds is not None and not args.batch:
+        p.error("Flaga --seeds wymaga --batch.")
     return args
