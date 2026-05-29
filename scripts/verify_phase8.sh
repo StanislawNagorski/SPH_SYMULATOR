@@ -109,8 +109,8 @@ check "C5 (TUT-05 mutex): --tutorial --batch --seeds 5 → 'Flagi --tutorial i -
     "{ $PY sph_sim.py --tutorial --batch --seeds 5 2>&1 || true; } | grep -F 'Flagi --tutorial i --batch są wzajemnie wykluczające'"
 check "C6 (TUT-05 mutex): --tutorial --compare-agent → 'Flagi --tutorial i --compare-agent są wzajemnie wykluczające'" \
     "{ $PY sph_sim.py --tutorial --compare-agent 2>&1 || true; } | grep -F 'Flagi --tutorial i --compare-agent są wzajemnie wykluczające'"
-check "C7 (TUT-05 fallback): bare sph_sim.py → 'Musisz podać jeden z trybów'" \
-    "{ $PY sph_sim.py 2>&1 || true; } | grep -F 'Musisz podać jeden z trybów'"
+check "C7 (UAT Gap 5): bare sph_sim.py auto-promotes do --interactive + drukuje banner 'Nie podano trybu'" \
+    "{ echo exit | $PY sph_sim.py 2>&1 || true; } | grep -F 'Nie podano trybu'"
 
 echo ""
 echo "── Category D. REPL tutorial command + 4 controls + non-skip ✓ zaliczone (TUT-01/02/03/04 + GATE-01) ──"
