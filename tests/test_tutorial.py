@@ -364,16 +364,24 @@ class TestTutorialCLI(unittest.TestCase):
             msg=f'avg_val_last100 brakuje w JSON output: {r.stdout[:600]}'
         )
 
-    def test_no_mode_errors_polish(self):
-        """python sph_sim.py (no mode flag) → exit 2 z polskim komunikatem 'Musisz podać jeden z trybów:'."""
-        r = _run_sph()
-        self.assertNotEqual(r.returncode, 0,
-                            msg=f'Brak trybu powinno fail, rc={r.returncode}')
-        combined = r.stderr + r.stdout
-        self.assertIn(
-            'Musisz podać jeden z trybów:', combined,
-            msg=f'Polski required-mode komunikat brakuje w stderr: {combined[:600]}'
-        )
+    def test_no_mode_defaults_to_interactive_with_banner(self):
+        """UAT Gap 5: `python sph_sim.py` (bare invocation) auto-promotes
+        to --interactive AND prints Polish info banner to stderr listing
+        the 4 alternate modes. REPL exits cleanly when stdin closes after
+        `exit`."""
+        r = _run_sph(input='exit\n')
+        self.assertEqual(r.returncode, 0,
+                         msg=f'Bare invocation should boot REPL, got rc={r.returncode}, stderr={r.stderr[:600]}')
+        # Banner is emitted BEFORE the REPL boots — check stderr.
+        self.assertIn('Nie podano trybu', r.stderr,
+                      msg=f'Banner header brakuje w stderr: {r.stderr[:800]}')
+        # All 4 alternate flag names listed in banner.
+        for flag in ('--strategy', '--custom', '--batch', '--tutorial'):
+            self.assertIn(flag, r.stderr,
+                          msg=f'Banner brakuje {flag}: {r.stderr[:1200]}')
+        # REPL did boot — INTRO banner should appear on stdout.
+        self.assertIn('Symulator Strategii', r.stdout,
+                      msg=f'REPL INTRO nie pokazany na bare invocation: {r.stdout[:600]}')
 
     def test_tutorial_flag_enters_tutorial_mode(self):
         """TUT-05 end-to-end: `python sph_sim.py --tutorial` → banner + krok 1/9 auto-shown."""

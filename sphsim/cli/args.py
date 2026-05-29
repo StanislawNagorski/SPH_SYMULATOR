@@ -25,6 +25,7 @@ DOSTĘPNE STRATEGIE:
   adaptive    -- COMMIT zależnie od poziomu bufora SUS
 """
 import argparse
+import sys
 from sphsim.strategies import STRATEGIES, BUILTIN_STRATEGIES
 from sphsim.config import DEFAULT_NU, DEFAULT_NSUS, DEFAULT_K0, DEFAULT_K1, DEFAULT_T, DEFAULT_KAPPA, DEFAULT_ALPHA, DEFAULT_PHI, DEFAULT_RHO
 
@@ -138,11 +139,12 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__
     )
-    # Phase 8 (Plan 08-02): required=False — `--tutorial` is intentionally outside
-    # this group (analog do `--batch`) and argparse enforces required=True BEFORE
-    # post-parse code runs, which would leak the English "one of the arguments ...
-    # is required" fallback for `python sph_sim.py --tutorial` alone. The Polish
-    # post-parse `Musisz podać jeden z trybów:` replaces that contract.
+    # Phase 8 (Plan 08-02 + UAT Gap 5 closure 08-10): required=False —
+    # `--tutorial` is intentionally outside this group (analog do `--batch`)
+    # and argparse enforces required=True BEFORE post-parse code runs.
+    # Post-parse: if NO mode flag is set, auto-promote to --interactive +
+    # print informational banner to stderr listing the 4 alternate modes.
+    # This replaces the earlier Plan 08-02 hard-error contract (exit 2).
     mutex = p.add_mutually_exclusive_group(required=False)
     mutex.add_argument('--interactive', action='store_true',
                        help='Uruchom tryb interaktywny (REPL)')
@@ -199,7 +201,18 @@ def parse_args():
     # fallback po obniżeniu mutex group do required=False; --tutorial jest
     # dopuszczalnym alternatywnym trybem poza mutex group).
     if not (args.interactive or args.strategy or args.custom or args.batch or args.tutorial):
-        p.error("Musisz podać jeden z trybów: --interactive, --strategy, --custom, --batch lub --tutorial.")
+        # UAT Gap 5 (Plan 08-10): auto-promote to --interactive + print
+        # Polish informational banner to stderr listing the 4 alternate
+        # modes. Replaces Plan 08-02 hard-error contract — user requested
+        # discoverability over penalty.
+        args.interactive = True
+        print("Nie podano trybu — uruchamiam tryb interaktywny (REPL).", file=sys.stderr)
+        print("Dostępne tryby:", file=sys.stderr)
+        print("  --interactive   Tryb REPL z komendami: strategies, run, compare, batch, tutorial.", file=sys.stderr)
+        print("  --strategy NAZWA  Pojedyncza symulacja wbudowanej strategii (np. naive, incentive).", file=sys.stderr)
+        print("  --custom PLIK.py  Załaduj i uruchom własną strategię z pliku .py.", file=sys.stderr)
+        print("  --batch --seeds N  Uruchom strategię na wielu seedach z agregatem statystycznym.", file=sys.stderr)
+        print("  --tutorial      Interaktywny tutorial v1.1 (~9 kroków, ≤15 min).", file=sys.stderr)
     # Post-parse mutex checks (D-60) — twarde błędy z polskim komunikatem.
     if args.compare_agent and args.no_agent:
         p.error("Flagi --compare-agent i --no-agent są wzajemnie wykluczające.")
