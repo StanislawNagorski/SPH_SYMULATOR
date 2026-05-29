@@ -1,9 +1,10 @@
 ---
-status: diagnosed
+status: resolved
 phase: 08-documentation-interactive-tutorial
 source: [08-00-SUMMARY.md, 08-01-SUMMARY.md, 08-02-SUMMARY.md, 08-03-SUMMARY.md, 08-04-SUMMARY.md, 08-05-SUMMARY.md, 08-06-SUMMARY.md, 08-07-SUMMARY.md]
+resolved_by: [08-08-SUMMARY.md, 08-09-SUMMARY.md, 08-10-SUMMARY.md]
 started: 2026-05-28T21:30:00Z
-updated: 2026-05-29T01:15:00Z
+updated: 2026-05-29T11:35:00Z
 ---
 
 ## Current Test
@@ -80,7 +81,7 @@ blocked: 0
 ## Gaps
 
 - truth: "INTRO banner of `--interactive` mode surfaces the new `tutorial` entry point so new users can discover the ≤15-min onboarding path"
-  status: failed
+  status: resolved
   reason: "User reported: nie ma wzmianki o tutorialu (after booting --interactive — banner shows only `help` and `exit` pointers, no mention of the new `tutorial` entry point)"
   severity: major
   test: 1
@@ -93,7 +94,7 @@ blocked: 0
   debug_session: ""
 
 - truth: "Tutorial control verbs (skip | back | repeat | exit) remain visible to the user throughout the tutorial flow, not only in the one-time entry banner"
-  status: failed
+  status: resolved
   reason: "User reported: nigdzie w tutorialu nie ma informacji o liniach sterowania (controls appear once in the banner then disappear; subsequent step displays don't remind the user that skip/back/repeat/exit are available)"
   severity: minor
   test: 2
@@ -109,7 +110,7 @@ blocked: 0
   debug_session: ""
 
 - truth: "Step 2 of the tutorial is split into two distinct steps: (a) list strategies via `strategies`, (b) view details via `strategy <nazwa>`"
-  status: failed
+  status: resolved
   reason: "User requested: rozbij krok 2 na 2 osobne — jeden wyświetl strategie, drugi zobacz szczegóły (current step 2 conflates both verbs into one display-only step; user wants them as two separate steps, raising total step count from 8 to 9)"
   severity: major
   test: 2
@@ -136,7 +137,7 @@ blocked: 0
   debug_session: ""
 
 - truth: "check_step rejects steps whose REPL output is 'nieznana komenda' (unknown command) — soft-pass steps must not accept garbage input"
-  status: failed
+  status: resolved
   reason: "User reported: jeśli wynikiem testu jest 'nieznana komenda' nie akceptuj kroku jako zaliczone (current soft-pass logic on steps 6 and 7 returns True for any non-empty line, including typos that SPHShell rejects with 'nieznana komenda')"
   severity: major
   test: 2
@@ -159,7 +160,7 @@ blocked: 0
   debug_session: ""
 
 - truth: "Running `python sph_sim.py` with no mode flag defaults to --interactive mode and prints an info banner explaining the implicit choice + a one-sentence description of each other available mode (--strategy, --custom, --batch, --tutorial)"
-  status: failed
+  status: resolved
   reason: "User requested: przy błędzie uruchomienia bez podanego trybu uruchamiaj domyślnie jako interactive, i dodaj informację, że uruchomiona jako interactive, inne dostępne tryby to: [current Polish required-mode error] + krótki jednozdaniowy opis każdego z trybów (current behavior: errors with 'Musisz podać jeden z trybów: ...'; requested behavior: implicit --interactive + informative banner)"
   severity: major
   test: 3
