@@ -159,13 +159,13 @@ class TestTutorialEntry(unittest.TestCase):
                       msg='SPHShell brakuje def postcmd')
 
     def test_tutorial_banner_and_step1_shown(self):
-        """TUT-01 behavior: `tutorial` w REPL → banner + krok 1/8 + Tutorial opuszczony po exit."""
+        """TUT-01 behavior: `tutorial` w REPL → banner + krok 1/9 + Tutorial opuszczony po exit."""
         r = _run_repl_interactive('tutorial\nexit\nexit\n')
         self.assertEqual(r.returncode, 0,
                          msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
         self.assertIn('INTERAKTYWNY TUTORIAL', r.stdout,
                       msg=f'banner brakuje w stdout: {r.stdout[:800]}')
-        self.assertIn('[krok 1/8', r.stdout,
+        self.assertIn('[krok 1/9', r.stdout,
                       msg=f'step 1 display brakuje w stdout: {r.stdout[:800]}')
         self.assertIn('Tutorial opuszczony', r.stdout,
                       msg=f'exit msg brakuje w stdout: {r.stdout[:800]}')
@@ -185,17 +185,17 @@ class TestTutorialControls(unittest.TestCase):
         r = _run_repl_interactive('tutorial\nskip\nexit\nexit\n')
         self.assertEqual(r.returncode, 0,
                          msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
-        self.assertIn('pominięto — krok 1/8', r.stdout,
+        self.assertIn('pominięto — krok 1/9', r.stdout,
                       msg=f'pominięto komunikat brakuje: {r.stdout[:1500]}')
-        self.assertIn('[krok 2/8', r.stdout,
-                      msg=f'krok 2/8 nie pokazany po skip: {r.stdout[:1500]}')
+        self.assertIn('[krok 2/9', r.stdout,
+                      msg=f'krok 2/9 nie pokazany po skip: {r.stdout[:1500]}')
 
     def test_back_decrements_counter(self):
         """TUT-03: back z kroku 2 wraca do kroku 1 (decrement)."""
         r = _run_repl_interactive('tutorial\nskip\nback\nexit\nexit\n')
         self.assertEqual(r.returncode, 0,
                          msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
-        self.assertIn('cofnięto do kroku 1/8', r.stdout,
+        self.assertIn('cofnięto do kroku 1/9', r.stdout,
                       msg=f'back nie cofnął do kroku 1: {r.stdout[:1500]}')
 
     def test_back_at_step_one_boundary(self):
@@ -207,21 +207,23 @@ class TestTutorialControls(unittest.TestCase):
                       msg=f'back boundary msg brakuje: {r.stdout[:1500]}')
 
     def test_soft_pass_step_rejects_unknown_command(self):
-        """UAT Gap 4: typo on step 6 (soft-pass) must NOT auto-advance —
-        `Nieznana komenda` short-circuits check_step via _last_command_unknown."""
-        # Reach step 6 via 5 skips (steps 1→6).
+        """UAT Gap 4 (post UAT Gap 3 split): typo on step 7 (env — first
+        soft-pass post split) must NOT auto-advance — `Nieznana komenda`
+        short-circuits check_step via _last_command_unknown."""
+        # Reach step 7 via 6 skips (steps 1→7). The first soft-pass step
+        # shifted from old 6 to new 7 after splitting step 2.
         r = _run_repl_interactive(
-            'tutorial\nskip\nskip\nskip\nskip\nskip\ntojesttypo\nexit\nexit\n'
+            'tutorial\nskip\nskip\nskip\nskip\nskip\nskip\ntojesttypo\nexit\nexit\n'
         )
         self.assertEqual(r.returncode, 0,
                          msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
         self.assertIn('Nieznana komenda', r.stdout,
                       msg=f'default() nie zarejestrował typo: {r.stdout[:2000]}')
-        self.assertNotIn('✓ zaliczone — krok 6/8', r.stdout,
-                         msg=f'typo nie powinien advance step 6: {r.stdout[:2000]}')
-        # Still on step 6 after typo (no advance, no implicit repeat needed).
-        self.assertIn('[krok 6/8', r.stdout,
-                      msg=f'step 6 banner nie widoczny: {r.stdout[:2000]}')
+        self.assertNotIn('✓ zaliczone — krok 7/9', r.stdout,
+                         msg=f'typo nie powinien advance step 7: {r.stdout[:2000]}')
+        # Still on step 7 after typo (no advance, no implicit repeat needed).
+        self.assertIn('[krok 7/9', r.stdout,
+                      msg=f'step 7 banner nie widoczny: {r.stdout[:2000]}')
 
 
 class TestTutorialExit(unittest.TestCase):
@@ -264,8 +266,8 @@ class TestTutorialExit(unittest.TestCase):
         self.assertEqual(banner_count, 1,
                          msg=f"Tutorial banner must appear EXACTLY once, got {banner_count}. "
                              f"stdout={r.stdout[:3000]}")
-        # Step 1 description block — `[krok 1/8 — Baseline]` heading — also exactly once.
-        step1_count = r.stdout.count('[krok 1/8')
+        # Step 1 description block — `[krok 1/9 — Baseline]` heading — also exactly once.
+        step1_count = r.stdout.count('[krok 1/9')
         self.assertEqual(step1_count, 1,
                          msg=f"Step 1 heading must appear EXACTLY once, got {step1_count}. "
                              f"stdout={r.stdout[:3000]}")
@@ -374,14 +376,14 @@ class TestTutorialCLI(unittest.TestCase):
         )
 
     def test_tutorial_flag_enters_tutorial_mode(self):
-        """TUT-05 end-to-end: `python sph_sim.py --tutorial` → banner + krok 1/8 auto-shown."""
+        """TUT-05 end-to-end: `python sph_sim.py --tutorial` → banner + krok 1/9 auto-shown."""
         r = _run_repl_tutorial_flag('exit\nexit\n')
         self.assertEqual(r.returncode, 0,
                          msg=f'--tutorial crashed rc={r.returncode}, stderr={r.stderr[:600]}')
         self.assertIn('INTERAKTYWNY TUTORIAL', r.stdout,
                       msg=f'banner brakuje pod --tutorial: {r.stdout[:1500]}')
-        self.assertIn('[krok 1/8', r.stdout,
-                      msg=f'krok 1/8 nie pokazany pod --tutorial: {r.stdout[:1500]}')
+        self.assertIn('[krok 1/9', r.stdout,
+                      msg=f'krok 1/9 nie pokazany pod --tutorial: {r.stdout[:1500]}')
 
 
 class TestTutorialReports(unittest.TestCase):
@@ -459,7 +461,7 @@ class TestTutorialReports(unittest.TestCase):
                          msg=f'non-tutorial dir name should be timestamp: {ts_dir.name}')
 
     def test_tutorial_step_verification_advances(self):
-        """TUT-06 + Task 2 GREEN: successful step 1 verification fires `✓ zaliczone — krok 1/8` and auto-advances to step 2."""
+        """TUT-06 + Task 2 GREEN: successful step 1 verification fires `✓ zaliczone — krok 1/9` and auto-advances to step 2."""
         r = subprocess.run(
             [sys.executable, os.path.join(_PROJECT_ROOT, 'sph_sim.py'), '--interactive'],
             input='tutorial\nrun naive zeta=0.75\nexit\nexit\n',
@@ -471,9 +473,9 @@ class TestTutorialReports(unittest.TestCase):
         )
         self.assertEqual(r.returncode, 0,
                          msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
-        self.assertIn('✓ zaliczone — krok 1/8', r.stdout,
+        self.assertIn('✓ zaliczone — krok 1/9', r.stdout,
                       msg=f'step 1 verification not fired: {r.stdout[-2000:]}')
-        self.assertIn('[krok 2/8', r.stdout,
+        self.assertIn('[krok 2/9', r.stdout,
                       msg=f'auto-advance to step 2 not visible: {r.stdout[-2000:]}')
 
     # ── D-10 unit tests (plan 08-01) ───────────────────────────────────────
@@ -650,11 +652,12 @@ class TestTutorialFlow(unittest.TestCase):
     # === Task 1 tests: dataclasses + module-level constants ===
 
     def test_tutorialflow_defaults(self):
-        """Test 1: TutorialFlow() defaults — step=1, total=8, hint_count=0, MAX_HINTS=3, session_ts matches r'\\d{8}-\\d{6}'."""
+        """Test 1: TutorialFlow() defaults — step=1, total=9 (post UAT Gap 3 split),
+        hint_count=0, MAX_HINTS=3, session_ts matches r'\\d{8}-\\d{6}'."""
         from sphsim.cli.tutorial import TutorialFlow
         tf = TutorialFlow()
         self.assertEqual(tf.step, 1)
-        self.assertEqual(tf.total, 8)
+        self.assertEqual(tf.total, 9)
         self.assertEqual(tf.hint_count, 0)
         self.assertEqual(tf.MAX_HINTS, 3)
         self.assertRegex(tf.session_ts, r'^\d{8}-\d{6}$')
@@ -677,25 +680,27 @@ class TestTutorialFlow(unittest.TestCase):
         )
 
     def test_step_topics_keys_and_slugs(self):
-        """Test 4: STEP_TOPICS dict with int keys 1..8 mapping to ordered slugs."""
+        """Test 4: STEP_TOPICS dict with int keys 1..9 mapping to ordered slugs
+        (post UAT Gap 3 — new key 3 'strategy-details')."""
         from sphsim.cli.tutorial import STEP_TOPICS
         expected = {
             1: 'baseline',
             2: 'strategies',
-            3: 'run-strategy',
-            4: 'custom',
-            5: 'compare',
-            6: 'env',
-            7: 'report',
-            8: 'batch',
+            3: 'strategy-details',
+            4: 'run-strategy',
+            5: 'custom',
+            6: 'compare',
+            7: 'env',
+            8: 'report',
+            9: 'batch',
         }
         self.assertEqual(STEP_TOPICS, expected)
 
     def test_step_tasks_have_tutorialstep_instances(self):
-        """Test 5: STEP_TASKS dict[int]->TutorialStep with .description, .expected_command_hint, .topic matching STEP_TOPICS."""
+        """Test 5: STEP_TASKS dict[int]->TutorialStep with .description, .expected_command_hint, .topic matching STEP_TOPICS (1..9 post UAT Gap 3)."""
         from sphsim.cli.tutorial import STEP_TASKS, STEP_TOPICS, TutorialStep
-        self.assertEqual(set(STEP_TASKS.keys()), set(range(1, 9)))
-        for step_n in range(1, 9):
+        self.assertEqual(set(STEP_TASKS.keys()), set(range(1, 10)))
+        for step_n in range(1, 10):
             ts = STEP_TASKS[step_n]
             self.assertIsInstance(ts, TutorialStep)
             self.assertIsInstance(ts.description, str)
@@ -709,10 +714,10 @@ class TestTutorialFlow(unittest.TestCase):
         self.assertIn('run naive', desc)
         self.assertIn('KPI', desc)
 
-    def test_step6_open_question_2_resolution(self):
-        """Test 7: STEP_TASKS[6].description contains '--phi' and 'informacyjny' (Open Question #2 — soft-pass informational step)."""
+    def test_step7_open_question_2_resolution(self):
+        """Test 7: STEP_TASKS[7].description contains '--phi' and 'informacyjny' (Open Question #2 — soft-pass informational step; env step renumbered from 6 to 7 after UAT Gap 3 split)."""
         from sphsim.cli.tutorial import STEP_TASKS
-        desc = STEP_TASKS[6].description
+        desc = STEP_TASKS[7].description
         self.assertIn('--phi', desc)
         self.assertIn('informacyjny', desc)
 
@@ -743,86 +748,106 @@ class TestTutorialFlow(unittest.TestCase):
         ))
 
     def test_check_step2_strategies(self):
-        """Test 3 (step 2 strategies): line=='strategies' or startswith('strategy ') passes; else fails."""
+        """Test 3 (step 2 strategies — list-only post UAT Gap 3 split):
+        line=='strategies' passes; 'strategy <name>' goes to step 3."""
         from sphsim.cli.tutorial import check_step
         self.assertTrue(check_step(2, 'strategies', None, set(), frozenset()))
-        self.assertTrue(check_step(2, 'strategy incentive', None, set(), frozenset()))
+        self.assertFalse(check_step(2, 'strategy incentive', None, set(), frozenset()),
+                         msg="step 2 must NOT accept `strategy <name>` after split")
         self.assertFalse(check_step(2, 'run naive', None, set(), frozenset()))
 
-    def test_check_step3_any_builtin(self):
-        """Test 4 (step 3 any builtin): run <builtin> passes; run <non-builtin> fails."""
+    def test_check_step3_strategy_details(self):
+        """Test 3b (step 3 strategy details — UAT Gap 3 split): `strategy
+        <name>` passes; bare `strategies` fails (tokens[0] must be 'strategy'
+        AND len(tokens) >= 2)."""
+        from sphsim.cli.tutorial import check_step
+        self.assertTrue(check_step(3, 'strategy incentive', None, set(), frozenset()))
+        self.assertTrue(check_step(3, 'strategy adaptive', None, set(), frozenset()))
+        self.assertFalse(check_step(3, 'strategies', None, set(), frozenset()),
+                         msg="step 3 requires `strategy <name>`, bare `strategies` is step 2")
+        self.assertFalse(check_step(3, 'strategy', None, set(), frozenset()),
+                         msg="step 3 requires a name after `strategy`")
+
+    def test_check_step4_any_builtin(self):
+        """Test 4 (step 4 any builtin — old step 3, renumbered post UAT Gap 3):
+        run <builtin> passes; run <non-builtin> fails."""
         from sphsim.cli.tutorial import check_step
         builtins = frozenset({'naive', 'incentive', 'adaptive'})
         self.assertTrue(check_step(
-            3, 'run incentive',
+            4, 'run incentive',
             {'avg_val_last100': 50.0},
             set(builtins), builtins,
         ))
         self.assertFalse(check_step(
-            3, 'run xyz',
+            4, 'run xyz',
             {'avg_val_last100': 50.0},
             set(builtins), builtins,
         ))
 
-    def test_check_step4_custom(self):
-        """Test 5 (step 4 custom): new key in strategies_keys but not in builtins → True; no new key → False."""
+    def test_check_step5_custom(self):
+        """Test 5 (step 5 custom — old step 4, renumbered post UAT Gap 3):
+        new key in strategies_keys but not in builtins → True; no new key → False."""
         from sphsim.cli.tutorial import check_step
         # custom loaded → diff non-empty
         self.assertTrue(check_step(
-            4, 'custom examples/custom_strategy_template.py',
+            5, 'custom examples/custom_strategy_template.py',
             None,
             {'naive', 'my_custom'}, frozenset({'naive'}),
         ))
         # no custom loaded → diff empty
         self.assertFalse(check_step(
-            4, 'custom path.py',
+            5, 'custom path.py',
             None,
             {'naive'}, frozenset({'naive'}),
         ))
 
-    def test_check_step5_compare(self):
-        """Test 6 (step 5 compare): compare cmd + comparison.delta truthy → True; empty delta → False."""
+    def test_check_step6_compare(self):
+        """Test 6 (step 6 compare — old step 5, renumbered post UAT Gap 3):
+        compare cmd + comparison.delta truthy → True; empty delta → False."""
         from sphsim.cli.tutorial import check_step
         self.assertTrue(check_step(
-            5, 'compare incentive',
+            6, 'compare incentive',
             {'comparison': {'delta': {'avg_val': 5.0}}},
             set(), frozenset(),
         ))
         self.assertFalse(check_step(
-            5, 'compare',
+            6, 'compare',
             {'comparison': {}},
             set(), frozenset(),
         ))
 
-    def test_check_step6_soft_pass(self):
-        """Test 7 (step 6 soft-pass): any non-empty line → True; empty → False (Open Question #2 resolution)."""
-        from sphsim.cli.tutorial import check_step
-        self.assertTrue(check_step(6, 'anything', None, set(), frozenset()))
-        self.assertTrue(check_step(6, 'skip', None, set(), frozenset()))
-        self.assertFalse(check_step(6, '', None, set(), frozenset()))
-
     def test_check_step7_soft_pass(self):
-        """Test 8 (step 7 soft-pass): any non-empty line → True (Open Question #3 resolution)."""
+        """Test 7 (step 7 soft-pass — old step 6 env, renumbered post UAT Gap 3):
+        any non-empty line → True; empty → False (Open Question #2 resolution)."""
         from sphsim.cli.tutorial import check_step
         self.assertTrue(check_step(7, 'anything', None, set(), frozenset()))
         self.assertTrue(check_step(7, 'skip', None, set(), frozenset()))
         self.assertFalse(check_step(7, '', None, set(), frozenset()))
 
-    def test_check_step8_batch(self):
-        """Test 9 (step 8 batch): batch + --seeds + aggregate in result → True; missing --seeds → False; no result → False."""
+    def test_check_step8_soft_pass(self):
+        """Test 8 (step 8 soft-pass — old step 7 report, renumbered post UAT Gap 3):
+        any non-empty line → True (Open Question #3 resolution)."""
+        from sphsim.cli.tutorial import check_step
+        self.assertTrue(check_step(8, 'anything', None, set(), frozenset()))
+        self.assertTrue(check_step(8, 'skip', None, set(), frozenset()))
+        self.assertFalse(check_step(8, '', None, set(), frozenset()))
+
+    def test_check_step9_batch(self):
+        """Test 9 (step 9 batch — old step 8, renumbered post UAT Gap 3):
+        batch + --seeds + aggregate in result → True; missing --seeds → False; no result → False."""
         from sphsim.cli.tutorial import check_step
         self.assertTrue(check_step(
-            8, 'batch naive --seeds 5',
+            9, 'batch naive --seeds 5',
             {'aggregate': {'avg_val_last100': {'mean': 92.0}}, 'per_seed': []},
             set(), frozenset(),
         ))
         self.assertFalse(check_step(
-            8, 'batch naive',
+            9, 'batch naive',
             {'aggregate': {'avg_val_last100': {'mean': 92.0}}},
             set(), frozenset(),
         ))
         self.assertFalse(check_step(
-            8, 'batch naive --seeds 5',
+            9, 'batch naive --seeds 5',
             None,
             set(), frozenset(),
         ))

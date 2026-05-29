@@ -35,12 +35,13 @@ from typing import Optional, Set
 STEP_TOPICS = {
     1: 'baseline',
     2: 'strategies',
-    3: 'run-strategy',
-    4: 'custom',
-    5: 'compare',
-    6: 'env',
-    7: 'report',
-    8: 'batch',
+    3: 'strategy-details',
+    4: 'run-strategy',
+    5: 'custom',
+    6: 'compare',
+    7: 'env',
+    8: 'report',
+    9: 'batch',
 }
 
 
@@ -81,17 +82,30 @@ STEP_TASKS = {
         topic='strategies',
         title='Lista strategii',
         description=(
-            "Wyświetl listę strategii i szczegóły jednej z nich:\n"
+            "Wyświetl listę wbudowanych i custom strategii:\n"
             "\n"
             "  strategies\n"
-            "  strategy incentive\n"
             "\n"
-            "W odpowiedzi zobaczysz opis, parametry i baseline KPI."
+            "Zobaczysz nazwę, krótki opis i sufiks `[custom]` dla niewbudowanych."
         ),
         expected_command_hint='strategies',
     ),
     3: TutorialStep(
         step_num=3,
+        topic='strategy-details',
+        title='Szczegóły strategii',
+        description=(
+            "Wyświetl szczegóły jednej strategii, np.:\n"
+            "\n"
+            "  strategy incentive\n"
+            "\n"
+            "Zobaczysz opis, parametry (z typami i defaultami) oraz\n"
+            "baseline KPI (jeśli zdefiniowany w STRATEGY_META)."
+        ),
+        expected_command_hint='strategy incentive',
+    ),
+    4: TutorialStep(
+        step_num=4,
         topic='run-strategy',
         title='Inna strategia',
         description=(
@@ -104,8 +118,8 @@ STEP_TASKS = {
         ),
         expected_command_hint='run incentive expected_P=30',
     ),
-    4: TutorialStep(
-        step_num=4,
+    5: TutorialStep(
+        step_num=5,
         topic='custom',
         title='Custom strategia',
         description=(
@@ -119,8 +133,8 @@ STEP_TASKS = {
         ),
         expected_command_hint='custom examples/custom_strategy_template.py',
     ),
-    5: TutorialStep(
-        step_num=5,
+    6: TutorialStep(
+        step_num=6,
         topic='compare',
         title='Porównanie z agentem',
         description=(
@@ -134,8 +148,8 @@ STEP_TASKS = {
         ),
         expected_command_hint='compare incentive expected_P=30',
     ),
-    6: TutorialStep(
-        step_num=6,
+    7: TutorialStep(
+        step_num=7,
         topic='env',
         title='Override środowiska (informacyjny)',
         description=(
@@ -154,8 +168,8 @@ STEP_TASKS = {
             '--valuation step --seed 42 --no-agent'
         ),
     ),
-    7: TutorialStep(
-        step_num=7,
+    8: TutorialStep(
+        step_num=8,
         topic='report',
         title='Inspekcja raportu',
         description=(
@@ -169,8 +183,8 @@ STEP_TASKS = {
         ),
         expected_command_hint='skip',
     ),
-    8: TutorialStep(
-        step_num=8,
+    9: TutorialStep(
+        step_num=9,
         topic='batch',
         title='Batch + agregat',
         description=(
@@ -194,8 +208,8 @@ class TutorialFlow:
     serialization, no filesystem state.
 
     Fields per RESEARCH §Pattern 1 (lines 178-193):
-      * step          — current step number (1..8), advances via postcmd / skip.
-      * total         — total step count (constant = 8 for Phase 8).
+      * step          — current step number (1..9), advances via postcmd / skip.
+      * total         — total step count (constant = 9 for Phase 8, post UAT Gap 3).
       * session_ts    — UTC-naive timestamp used in tutorial report dir name;
                         format `YYYYMMDD-HHMMSS` matches existing report dir
                         convention in sphsim.report.
@@ -204,7 +218,7 @@ class TutorialFlow:
       * MAX_HINTS     — cap on hints per step before postcmd auto-advances.
     """
     step: int = 1
-    total: int = 8
+    total: int = 9
     session_ts: str = field(default_factory=lambda: datetime.now().strftime('%Y%m%d-%H%M%S'))
     hint_count: int = 0
     MAX_HINTS: int = 3
@@ -269,13 +283,20 @@ def check_step(
             and last_sim_result.get('avg_val_last100', 0) >= 80.0
         )
 
-    # Step 2 (strategies) — display-only; pass when the user types the listing
-    # command or asks for a single strategy. No simulator dependency.
+    # Step 2 (strategies — list-only). UAT Gap 3 split: previously this
+    # branch also accepted `strategy <name>`; that detail step is now
+    # step 3 (its own branch). step 2 accepts ONLY `strategies`.
     if step_n == 2:
-        return line == 'strategies' or line.startswith('strategy ')
+        return line == 'strategies'
 
-    # Step 3 (run-strategy) — run + builtin name + simulator produced a result.
+    # Step 3 (strategy-details — UAT Gap 3 split). Accept any `strategy
+    # <name>` invocation. No simulator dependency. The user is expected
+    # to type a specific strategy after the verb.
     if step_n == 3:
+        return len(tokens) >= 2 and tokens[0] == 'strategy'
+
+    # Step 4 (run-strategy) — run + builtin name + simulator produced a result.
+    if step_n == 4:
         return (
             len(tokens) >= 2 and tokens[0] == 'run'
             and tokens[1] in builtin_strategies
@@ -283,18 +304,18 @@ def check_step(
             and last_sim_result.get('avg_val_last100', None) is not None
         )
 
-    # Step 4 (custom) — pass iff STRATEGIES now contains a non-builtin key.
+    # Step 5 (custom) — pass iff STRATEGIES now contains a non-builtin key.
     # Shape check on `line` is intentionally skipped: postcmd has already
     # mutated STRATEGIES via do_custom; checking the diff is more reliable
     # than parsing the command line (the user may have reload-loaded an
     # existing custom under a different alias).
-    if step_n == 4:
+    if step_n == 5:
         return bool(set(strategies_keys) - set(builtin_strategies))
 
-    # Step 5 (compare) — `compare ...` AND comparison.delta is truthy.
+    # Step 6 (compare) — `compare ...` AND comparison.delta is truthy.
     # Empty delta dict ({}) is intentionally False: it means do_compare ran
     # but produced no real KPI diff (e.g. agent-only side errored).
-    if step_n == 5:
+    if step_n == 6:
         return bool(
             tokens and tokens[0] == 'compare'
             and last_sim_result is not None
@@ -302,20 +323,20 @@ def check_step(
             and last_sim_result['comparison'].get('delta')
         )
 
-    # Step 6 (env) — Open Question #2 resolution: soft-pass informational step.
+    # Step 7 (env) — Open Question #2 resolution: soft-pass informational step.
     # The displayed command is for the user to try LATER in a separate shell;
     # the REPL doesn't run it. Any non-empty line advances the tutorial.
-    if step_n == 6:
-        return bool(line)
-
-    # Step 7 (report) — Open Question #3 resolution: soft-pass display step.
-    # User is encouraged to `cat` the report in a second terminal; any input
-    # advances. Same shape as step 6.
     if step_n == 7:
         return bool(line)
 
-    # Step 8 (batch) — `batch ... --seeds ...` AND aggregate dict in result.
+    # Step 8 (report) — Open Question #3 resolution: soft-pass display step.
+    # User is encouraged to `cat` the report in a second terminal; any input
+    # advances. Same shape as step 7.
     if step_n == 8:
+        return bool(line)
+
+    # Step 9 (batch) — `batch ... --seeds ...` AND aggregate dict in result.
+    if step_n == 9:
         return bool(
             tokens and tokens[0] == 'batch' and '--seeds' in line
             and last_sim_result is not None
