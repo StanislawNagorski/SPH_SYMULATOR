@@ -1,12 +1,12 @@
 # SPH Symulator Strategii v1.1
 
-Symulator porównuje strategie podejmowania decyzji (COMMIT/ABSTAIN) w systemie zawodnych urządzeń autonomicznych z 5 fazami eksploatacji. Projekt na ekonometrię. `RationalAgent` filtruje decyzje o ujemnej oczekiwanej wartości.
+Symulator porównuje strategie podejmowania decyzji (COMMIT/ABSTAIN) w systemie zawodnych urządzeń autonomicznych z 5 fazami eksploatacji. `RationalAgent` filtruje decyzje o ujemnej oczekiwanej wartości.
 
 > Najszybszy start: `python sph_sim.py --tutorial`. Interaktywny przewodnik po wszystkich funkcjach v1.1 (~15 min).
 >
 > Reszta tego pliku opisuje to samo na piśmie. Można czytać liniowo lub używać jako referencji.
 
-## Szybki start (60 sekund)
+## Szybki start
 
 ```bash
 git clone <repo-url> && cd ekonometria-2
