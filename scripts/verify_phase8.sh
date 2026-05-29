@@ -116,12 +116,12 @@ echo ""
 echo "── Category D. REPL tutorial command + 4 controls + non-skip ✓ zaliczone (TUT-01/02/03/04 + GATE-01) ──"
 check "D1 (TUT-01 help): 'tutorial' widoczne w 'help' REPL listy" \
     "printf 'help\\nexit\\n' | SPHSIM_NO_REPORT=1 $PY sph_sim.py --interactive 2>&1 | grep -F 'tutorial'"
-check "D2 (TUT-01 banner + step1): 'tutorial' w REPL pokazuje banner i [krok 1/8" \
-    "printf 'tutorial\\nexit\\nexit\\n' | SPHSIM_NO_REPORT=1 $PY sph_sim.py --interactive 2>&1 | grep -F 'INTERAKTYWNY TUTORIAL' && printf 'tutorial\\nexit\\nexit\\n' | SPHSIM_NO_REPORT=1 $PY sph_sim.py --interactive 2>&1 | grep -F '[krok 1/8'"
-check "D3 (TUT-02 skip): 8 skipów dochodzi do 'pominięto — krok 8/8'" \
-    "rm -rf ./reports/tutorial-* ./reports/batch_* ./reports/[0-9]*; printf 'tutorial\\nskip\\nskip\\nskip\\nskip\\nskip\\nskip\\nskip\\nskip\\nexit\\n' | SPHSIM_NO_REPORT=1 $PY sph_sim.py --interactive 2>&1 | grep -F 'pominięto — krok 8/8'"
-check "D4 (GATE-01 non-skip): step 1 verification fires '✓ zaliczone — krok 1/8' po 'run naive zeta=0.75'" \
-    "rm -rf ./reports/tutorial-* ./reports/batch_* ./reports/[0-9]*; printf 'tutorial\\nrun naive zeta=0.75\\nexit\\nexit\\n' | SPHSIM_NO_REPORT='' $PY sph_sim.py --interactive 2>&1 | grep -F '✓ zaliczone — krok 1/8'"
+check "D2 (TUT-01 banner + step1): 'tutorial' w REPL pokazuje banner i [krok 1/9" \
+    "printf 'tutorial\\nexit\\nexit\\n' | SPHSIM_NO_REPORT=1 $PY sph_sim.py --interactive 2>&1 | grep -F 'INTERAKTYWNY TUTORIAL' && printf 'tutorial\\nexit\\nexit\\n' | SPHSIM_NO_REPORT=1 $PY sph_sim.py --interactive 2>&1 | grep -F '[krok 1/9'"
+check "D3 (TUT-02 skip): 9 skipów dochodzi do 'pominięto — krok 9/9'" \
+    "rm -rf ./reports/tutorial-* ./reports/batch_* ./reports/[0-9]*; printf 'tutorial\\nskip\\nskip\\nskip\\nskip\\nskip\\nskip\\nskip\\nskip\\nskip\\nexit\\n' | SPHSIM_NO_REPORT=1 $PY sph_sim.py --interactive 2>&1 | grep -F 'pominięto — krok 9/9'"
+check "D4 (GATE-01 non-skip): step 1 verification fires '✓ zaliczone — krok 1/9' po 'run naive zeta=0.75'" \
+    "rm -rf ./reports/tutorial-* ./reports/batch_* ./reports/[0-9]*; printf 'tutorial\\nrun naive zeta=0.75\\nexit\\nexit\\n' | SPHSIM_NO_REPORT='' $PY sph_sim.py --interactive 2>&1 | grep -F '✓ zaliczone — krok 1/9'"
 check "D5 (TUT-03 back boundary): 'back' na kroku 1 → 'Już jesteś na pierwszym kroku.'" \
     "printf 'tutorial\\nback\\nexit\\nexit\\n' | SPHSIM_NO_REPORT=1 $PY sph_sim.py --interactive 2>&1 | grep -F 'Już jesteś na pierwszym kroku.'"
 check "D6 (TUT-04 Pitfall 1): 'exit' w tutorial nie kończy REPL — 'Tutorial opuszczony'" \
