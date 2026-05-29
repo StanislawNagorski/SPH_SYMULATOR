@@ -1,26 +1,24 @@
-# Przewodnik użytkownika — SPH Symulator Strategii v1.1
+# SPH Symulator Strategii v1.1
 
-> Najszybszy sposób żeby zacząć — uruchom `python sph_sim.py --tutorial`
-> i przejdź interaktywnie przez wszystkie zdolności v1.1 (~15 min).
+Symulator porównuje strategie podejmowania decyzji (COMMIT/ABSTAIN) w systemie zawodnych urządzeń autonomicznych z 5 fazami eksploatacji. Projekt na ekonometrię. `RationalAgent` filtruje decyzje o ujemnej oczekiwanej wartości.
+
+> Najszybszy start: `python sph_sim.py --tutorial`. Interaktywny przewodnik po wszystkich funkcjach v1.1 (~15 min).
 >
-> Reszta tego dokumentu opisuje to samo w formie pisanej — można czytać
-> liniowo lub używać jako referencji.
+> Reszta tego pliku opisuje to samo na piśmie. Można czytać liniowo lub używać jako referencji.
 
 ## Szybki start (60 sekund)
 
 ```bash
-# Z verify_phase1.sh — regression baseline
-git clone <repo-url> && cd ekonometria-2   # (lub przejdź do istniejącego katalogu)
+git clone <repo-url> && cd ekonometria-2
 pip install -r requirements.txt
 
-# Baseline — oczekiwany wynik: avg_val_last100 = 92.0
+# Baseline. Oczekiwany wynik: avg_val_last100 = 92.0
 python sph_sim.py --strategy naive --zeta 0.75 --seed 42 --json --no-agent
 ```
 
-Gotowe. Raport MD + 2 wykresy PNG zapisały się automatycznie w `./reports/<timestamp>/`. Przykładowy fragment `report.md`:
+Raport MD i 2 wykresy PNG zapisują się automatycznie w `./reports/<timestamp>/`. Przykładowy fragment `report.md`:
 
 ```markdown
-<!-- Z reports/<ts>/report.md (naive --zeta 0.75 --seed 42 --no-agent) -->
 ## Konfiguracja środowiska
 | Parametr | Wartość |
 |----------|---------|
@@ -35,23 +33,23 @@ Gotowe. Raport MD + 2 wykresy PNG zapisały się automatycznie w `./reports/<tim
 | avg_net_profit     | 140.76  |
 ```
 
-Aby zobaczyć interaktywny przewodnik wraz z auto-weryfikacją kroków, uruchom: `python sph_sim.py --tutorial`.
+Żeby zobaczyć interaktywny przewodnik z auto-weryfikacją kroków: `python sph_sim.py --tutorial`.
 
 ## Interaktywny tutorial
 
 Uruchomienie:
 
-- **Z poziomu CLI:** `python sph_sim.py --tutorial` — REPL startuje od razu w trybie tutorial.
-- **Z poziomu REPL:** wpisz `tutorial` po `python sph_sim.py --interactive`.
+- Z poziomu CLI: `python sph_sim.py --tutorial`. REPL startuje od razu w trybie tutorial.
+- Z poziomu REPL: wpisz `tutorial` po `python sph_sim.py --interactive`.
 
 Sterowanie (4 komendy działają tylko w trybie tutorial):
 
-| Komenda  | Działanie                                                                  |
-|----------|----------------------------------------------------------------------------|
-| `skip`   | Przejdź do następnego kroku bez weryfikacji.                               |
-| `back`   | Cofnij do poprzedniego kroku (na pierwszym kroku komunikat o granicy).     |
-| `repeat` | Wyświetl bieżący krok ponownie.                                            |
-| `exit`   | Wyjdź z tutoriala (REPL zachowany — wpisz `exit` ponownie żeby zamknąć).   |
+| Komenda  | Działanie                                                              |
+|----------|------------------------------------------------------------------------|
+| `skip`   | Przejdź do następnego kroku bez weryfikacji.                           |
+| `back`   | Cofnij do poprzedniego kroku (na pierwszym kroku komunikat o granicy). |
+| `repeat` | Wyświetl bieżący krok ponownie.                                        |
+| `exit`   | Wyjdź z tutoriala (REPL zachowany. Wpisz `exit` ponownie, żeby zamknąć).|
 
 Przykładowy nagłówek kroku (tak wygląda krok w REPL):
 
@@ -67,7 +65,7 @@ To podstawowy punkt odniesienia (KPI = 92).
 sph>
 ```
 
-Tutorial nie wykonuje komend za ciebie — wpisujesz je sam (zgodnie z D-03). Każdy krok przesyła raporty do dedykowanego katalogu `./reports/tutorial-<ts>/step-N-<topic>/`, więc nie nadpisują twoich „zwykłych" raportów.
+Tutorial nie wykonuje komend za ciebie. Komendy wpisujesz sam. Każdy krok zapisuje raporty do osobnego katalogu `./reports/tutorial-<ts>/step-N-<topic>/`, więc nie nadpisują zwykłych raportów.
 
 ## Opis funkcjonalności v1.1
 
@@ -75,10 +73,9 @@ Tutorial nie wykonuje komend za ciebie — wpisujesz je sam (zgodnie z D-03). Ka
 
 REPL to ekran startowy `sph>` z 9 komendami: `help`, `exit`, `strategies`, `strategy`, `tutorial`, `custom`, `run`, `compare`, `batch`. Wszystkie komunikaty są po polsku, historia poleceń trzymana jest w `~/.sphsim_history` (czyta i zapisuje przy starcie/zakończeniu). REPL używa stdlib `cmd` + `readline`, więc działają strzałki w górę/dół, edycja linii, Ctrl-C i Ctrl-D.
 
-Praktyczny scenariusz odkrywczy — wpisz `help`, potem `strategies`, potem `strategy incentive` żeby zobaczyć parametry konkretnej strategii, i `exit` żeby zakończyć:
+Typowy scenariusz odkrywczy. Wpisz `help`, potem `strategies`, potem `strategy incentive`, żeby zobaczyć parametry konkretnej strategii, i `exit` żeby zakończyć:
 
 ```bash
-# Z 08-UAT.md test #2 — REPL Discovery Flow
 printf 'help\nstrategies\nstrategy incentive\nexit\n' | python sph_sim.py --interactive
 ```
 
@@ -86,82 +83,76 @@ printf 'help\nstrategies\nstrategy incentive\nexit\n' | python sph_sim.py --inte
 
 Własną strategię definiujesz jako plik `.py` z funkcją `strategy_<nazwa>(dev, l, s, phi, kappa, rho, h, p)` oraz słownikiem `STRATEGY_META`. Loader (`importlib`) rejestruje plik w prywatnym namespace `sphsim.custom.<nazwa>` i dodaje do `STRATEGIES`. Z CLI używaj flagi `--custom <ścieżka>`, w REPL komendy `custom <ścieżka>`. Szablon znajdziesz w `examples/custom_strategy_template.py`.
 
-**Uwaga bezpieczeństwa:** loader wykonuje arbitralny Python z pliku użytkownika. Ładuj wyłącznie pliki, którym ufasz — projekt jest świadomie lokalny i edukacyjny, ale to nadal `exec` cudzego kodu.
+Uwaga bezpieczeństwa: loader wykonuje arbitralny Python z pliku użytkownika. Ładuj wyłącznie pliki, którym ufasz. Projekt jest świadomie lokalny i edukacyjny, ale to nadal `exec` cudzego kodu.
 
 ```bash
-# Z 08-UAT.md test #3 — Custom strategy load
 python sph_sim.py --custom examples/custom_strategy_template.py --json --no-agent
 ```
 
 ### 3. Racjonalny agent (veto)
 
-`RationalAgent` to warstwa pomiędzy strategią a symulatorem. Domyślnie **włączona** — wetuje (override `COMMIT → ABSTAIN`) każdy ruch, dla którego oczekiwany zysk `E[zysk_i] = (1−φ_i)·p_i − κ − φ_i·ρ_i < 0`. Pełna formuła i dydaktyczny dowód incentive compatibility — w sekcji **Teoria** poniżej.
+`RationalAgent` to warstwa pomiędzy strategią a symulatorem. Domyślnie włączona. Wetuje (override `COMMIT → ABSTAIN`) każdy ruch, dla którego oczekiwany zysk `E[zysk_i] = (1−φ_i)·p_i − κ − φ_i·ρ_i < 0`. Pełna formuła i dydaktyczny dowód incentive compatibility w sekcji Teoria poniżej.
 
-Aby zobaczyć surową strategię (bez agenta) użyj `--no-agent`. Aby porównać oba przebiegi obok siebie (delta KPI, tabela vetoes per faza), użyj `--compare-agent`:
+Żeby zobaczyć surową strategię (bez agenta), użyj `--no-agent`. Żeby porównać oba przebiegi obok siebie (delta KPI, tabela vetoes per faza), użyj `--compare-agent`:
 
 ```bash
-# Z 08-UAT.md test #5 — Compare-agent empirical proof
 python sph_sim.py --strategy naive --zeta 0.95 --seed 42 --compare-agent --json
 ```
 
-Empiryczny dowód że agent chroni KPI: dla `naive --zeta 0.95` weto daje `delta.avg_net_profit ≈ +196.83` przy `n_vetoed_total = 21299` (głównie fazy 4-5).
+Empiryczny dowód, że agent chroni KPI: dla `naive --zeta 0.95` weto daje `delta.avg_net_profit ≈ +196.83` przy `n_vetoed_total = 21299` (głównie fazy 4-5).
 
 ### 4. Konfigurowalne środowisko
 
 Możesz nadpisać parametry środowiska: profil awarii `--phi p1,p2,p3,p4,p5` (5 floatów w [0,1]), koszty naprawy `--rho r1,r2,r3,r4,r5` (5 floatów ≥ 0), funkcję waluacji `--valuation window|step|linear`, oraz progi `--K0`/`--K1`. Walidacja w argparse zwraca polskie komunikaty (np. `--phi wymaga dokładnie 5 wartości` lub `--phi[1]=1.5 poza zakresem [0, 1]`).
 
 ```bash
-# Z 08-UAT.md test #6 — Configurable env
 python sph_sim.py --strategy naive --phi 0.1,0.2,0.3,0.4,0.5 --rho 1,2,3,4,5 \
                   --valuation step --seed 42 --json --no-agent
 ```
 
 Trzy presety waluacji (`window`/`step`/`linear`) przy `--zeta 0.75 --seed 42` dają trzy różne wartości `avg_val_last100`: 92.0 / 93.0 / 87.52. To pozwala badać wrażliwość strategii na kształt funkcji `g(u)`.
 
-### 5. Raport Markdown + wykresy PNG
+### 5. Raport Markdown i wykresy PNG
 
-Po **każdej** symulacji (CLI lub REPL) tworzony jest katalog `./reports/<timestamp>/` z trzema plikami:
+Po każdej symulacji (CLI lub REPL) tworzony jest katalog `./reports/<timestamp>/` z trzema plikami:
 
-- `report.md` — konfiguracja środowiska, parametry strategii, tabela 5 KPI, rozkład decyzji per faza, porównanie z baseline, relatywne linki do PNG.
-- `decision_distribution.png` — rozkład decyzji COMMIT/ABSTAIN/VETO per faza (1..5).
-- `kpi_timeseries.png` — przebieg `avg_val` w czasie z zaznaczonym oknem ostatnich 100 cykli.
+- `report.md`. Konfiguracja środowiska, parametry strategii, tabela 5 KPI, rozkład decyzji per faza, porównanie z baseline, relatywne linki do PNG.
+- `decision_distribution.png`. Rozkład decyzji COMMIT/ABSTAIN/VETO per faza (1..5).
+- `kpi_timeseries.png`. Przebieg `avg_val` w czasie z zaznaczonym oknem ostatnich 100 cykli.
 
-Generowanie jest zawsze włączone (decyzja D-26 — nie ma flagi `--plot`). Aby raporty CI/regression-check nie zaśmiecały dysku, jest opt-out: `SPHSIM_NO_REPORT=1`.
+Generowanie jest zawsze włączone (nie ma flagi `--plot`). Żeby raporty regresyjne nie zaśmiecały dysku, jest opt-out: `SPHSIM_NO_REPORT=1`.
 
-![Rozkład decyzji COMMIT/ABSTAIN/VETO per faza](assets/decision_distribution_naive.png)
+![Rozkład decyzji COMMIT/ABSTAIN/VETO per faza](docs/assets/decision_distribution_naive.png)
 
-![Przebieg avg_val w czasie z zaznaczonym oknem ostatnich 100 cykli](assets/kpi_timeseries_naive.png)
+![Przebieg avg_val w czasie z zaznaczonym oknem ostatnich 100 cykli](docs/assets/kpi_timeseries_naive.png)
 
-*Wykresy wygenerowane matplotlib 3.x z --seed 42. Przy różnych wersjach matplotlib piksele mogą się nieznacznie różnić, wartości KPI są identyczne.*
+*Wykresy wygenerowane matplotlib 3.x z `--seed 42`. Przy różnych wersjach matplotlib piksele mogą się nieznacznie różnić, wartości KPI są identyczne.*
 
 ```bash
-# Z 08-UAT.md test #7 — Report + PNGs always-on
 python sph_sim.py --strategy adaptive --s_target 10 --seed 42 --json
 # → ./reports/<ts>/report.md + decision_distribution.png + kpi_timeseries.png
 ```
 
-### 6. Batch runner + agregacja
+### 6. Batch runner i agregacja
 
-Tryb batch (`--batch --seeds <N|lista>`) uruchamia tę samą konfigurację dla wielu seedów i agreguje 5 KPI: mean, std, min, max, 95% CI (t-rozkład, df=N−1), oraz wydaje werdykt „bije baseline" gdy `CI_lower > 92.0`. Wynik na stdout to czytelne BATCH SUMMARY; pełna tabela per-seed + agregat są w `./reports/batch_<ts>/report.md`. Limit `MAX_SEEDS=1000` chroni przed OOM.
+Tryb batch (`--batch --seeds <N|lista>`) uruchamia tę samą konfigurację dla wielu seedów i agreguje 5 KPI: mean, std, min, max, 95% CI (t-rozkład, df=N−1), oraz wydaje werdykt „bije baseline" gdy `CI_lower > 92.0`. Wynik na stdout to czytelne BATCH SUMMARY; pełna tabela per-seed plus agregat są w `./reports/batch_<ts>/report.md`. Limit `MAX_SEEDS=1000` chroni przed OOM.
 
 ```bash
-# Z 08-UAT.md test #8 — Batch runner
 python sph_sim.py --strategy naive --zeta 0.75 --batch --seeds 10 --json --no-agent
 ```
 
-![Agregat statystyczny 5 KPI — box-ploty](assets/batch_aggregate_naive.png)
+![Agregat statystyczny 5 KPI — box-ploty](docs/assets/batch_aggregate_naive.png)
 
 ### 7. Pełny pipeline (cross-feature)
 
-Wszystkie zdolności łączą się ortogonalnie — możesz np. uruchomić batch własnej strategii z nadpisanym środowiskiem:
+Funkcje można łączyć dowolnie. Można np. uruchomić batch własnej strategii z nadpisanym środowiskiem:
 
 ```bash
-# Z 08-UAT.md test #9 — Full pipeline
 python sph_sim.py --custom examples/custom_strategy_template.py \
                   --batch --seeds 5 --json --no-agent
 ```
 
-Backwards-compatibility gwarantowana przez `scripts/regression_check.py` — 8 fixtures z v1.0 musi przechodzić byte-identical dla wszystkich 5 wbudowanych strategii (CLI-04 invariant).
+Backwards-compatibility gwarantowana przez `scripts/regression_check.py`. 8 fixtures z v1.0 musi przechodzić byte-identical dla wszystkich 5 wbudowanych strategii.
 
 ## Referencja
 
@@ -170,8 +161,8 @@ Backwards-compatibility gwarantowana przez `scripts/regression_check.py` — 8 f
 | Flaga             | Typ                | Domyślnie               | Opis                                                                  |
 |-------------------|--------------------|-------------------------|-----------------------------------------------------------------------|
 | `--alpha`         | float              | DEFAULT_ALPHA           | Wykładnik `h(i) = i^alpha`.                                           |
-| `--batch`         | bool (flag)        | false                   | Tryb batch — uruchom strategię N razy (wymaga `--seeds`).             |
-| `--compare-agent` | bool (flag)        | false                   | Uruchom 2x: z agentem i bez — tabela delta KPI.                       |
+| `--batch`         | bool (flag)        | false                   | Tryb batch. Uruchom strategię N razy (wymaga `--seeds`).              |
+| `--compare-agent` | bool (flag)        | false                   | Uruchom 2x: z agentem i bez. Tabela delta KPI.                        |
 | `--custom`        | str (path)         | None                    | Ścieżka do pliku `.py` z custom strategią.                            |
 | `--expected_P`    | float              | 100.0                   | `[incentive|agent]` Oczekiwana płatność.                              |
 | `--interactive`   | bool (flag)        | false                   | Uruchom tryb interaktywny (REPL).                                     |
@@ -225,15 +216,15 @@ Backwards-compatibility gwarantowana przez `scripts/regression_check.py` — 8 f
 
 ### Model SPH
 
-System składa się z `nU` zawodnych urządzeń autonomicznych w cyklu UP/DOWN, każde aktualnie znajdujące się w fazie eksploatacji 1..5 (faza 5 = krytyczne ryzyko awarii). W każdym cyklu strategia dla każdego urządzenia podejmuje decyzję: `COMMIT` (zaakceptuj zadanie, zaryzykuj awarię) lub `ABSTAIN` (odmów, zachowaj urządzenie do dalszego użytku). `RationalAgent` może dodatkowo wystawić **VETO** — zamienić `COMMIT` na `ABSTAIN`, jeśli oczekiwany zysk jest ujemny.
+System składa się z `nU` zawodnych urządzeń autonomicznych w cyklu UP/DOWN, każde aktualnie znajdujące się w fazie eksploatacji 1..5 (faza 5 = krytyczne ryzyko awarii). W każdym cyklu strategia podejmuje dla każdego urządzenia decyzję: `COMMIT` (zaakceptuj zadanie, zaryzykuj awarię) lub `ABSTAIN` (odmów, zachowaj urządzenie do dalszego użytku). `RationalAgent` może dodatkowo wystawić VETO. Zamienia `COMMIT` na `ABSTAIN`, jeśli oczekiwany zysk jest ujemny.
 
 ### KPI (5 podstawowych)
 
-- **`avg_val_last100`** — średnia wartość waluacji `g(u)` w ostatnich 100 cyklach (główny KPI, baseline = 92.0 dla `naive --zeta 0.75`).
-- **`avg_net_profit`** — średni zysk netto z transakcji, uwzględniający koszty `κ` i naprawy `ρ`.
-- **`delivery_ratio`** — frakcja udanych dostarczeń względem prób.
-- **`avg_providers_l100`** — średnia liczba aktywnych dostawców w ostatnich 100 cyklach.
-- **`cum_val_total`** — łączna wartość waluacji za pełen przebieg (proxy on long-run welfare).
+- `avg_val_last100`. Średnia wartość waluacji `g(u)` w ostatnich 100 cyklach (główny KPI, baseline = 92.0 dla `naive --zeta 0.75`).
+- `avg_net_profit`. Średni zysk netto z transakcji, uwzględniający koszty `κ` i naprawy `ρ`.
+- `delivery_ratio`. Frakcja udanych dostarczeń względem prób.
+- `avg_providers_l100`. Średnia liczba aktywnych dostawców w ostatnich 100 cyklach.
+- `cum_val_total`. Łączna wartość waluacji za pełen przebieg.
 
 ### Racjonalny agent (RationalAgent)
 
@@ -243,17 +234,12 @@ System składa się z `nU` zawodnych urządzeń autonomicznych w cyklu UP/DOWN, 
 E[zysk_i] = (1 − φ_i) · p_i  −  κ  −  φ_i · ρ_i
 ```
 
-gdzie `φ_i` — prawdopodobieństwo awarii w fazie `i`, `p_i` — oczekiwana płatność dla urządzenia w fazie `i` (proporcjonalna do `h(i)` względem sumy aktywnych dostawców), `κ` — koszt dostarczenia, `ρ_i` — koszt naprawy. Gdy `E[zysk_i] < 0`, agent zamienia `COMMIT` na `ABSTAIN`. Empirycznie weryfikujemy to przez `--compare-agent`: dla `naive --zeta 0.95` agent uratował średnio +196.83 jednostek zysku per uruchomienie (z 21299 veto, głównie w fazach 4-5).
+gdzie `φ_i` to prawdopodobieństwo awarii w fazie `i`, `p_i` to oczekiwana płatność dla urządzenia w fazie `i` (proporcjonalna do `h(i)` względem sumy aktywnych dostawców), `κ` to koszt dostarczenia, `ρ_i` to koszt naprawy. Gdy `E[zysk_i] < 0`, agent zamienia `COMMIT` na `ABSTAIN`. Weryfikuje to `--compare-agent`: dla `naive --zeta 0.95` agent uratował średnio +196.83 jednostek zysku per uruchomienie (z 21299 veto, głównie w fazach 4-5).
 
 ### Incentive compatibility (dydaktyczne)
 
-Konstrukcja `E[zysk_i]` to wprost warunek motywacyjnej zgodności z teorii mechanizmów: każda decyzja, którą agent zaakceptuje, ma nieujemną oczekiwaną wartość dla urządzenia. Pokazuje to (na przykładzie konkretnej gry SPH), że istnieje deterministyczny, audytowalny pasek bezpieczeństwa, który chroni KPI **bez** zmiany samej strategii (tylko ją filtruje). To kluczowa dydaktyczna obserwacja projektu.
+Konstrukcja `E[zysk_i]` to warunek motywacyjnej zgodności znany z teorii mechanizmów: każda decyzja, którą agent zaakceptuje, ma nieujemną oczekiwaną wartość dla urządzenia. Na przykładzie gry SPH widać, że można zbudować deterministyczny filtr bezpieczeństwa, który chroni KPI bez zmiany samej strategii (tylko ją filtruje), a każdą decyzję filtra da się prześledzić wstecz.
 
-### Link-outs
+### Materiały dodatkowe
 
-- Pełna teoria + derywacja matematyczna: → [PROMPT_DLA_AGENTA.txt](../PROMPT_DLA_AGENTA.txt)
-- Eksperymenty, wyniki, dyskusja: → [Raport.pdf](../Raport.pdf)
-
----
-
-*Ostatnia aktualizacja: 2026-05-28 (Phase 8 wave 3 — pierwsza wersja).*
+- Eksperymenty, wyniki, dyskusja: [Raport.pdf](Raport.pdf)

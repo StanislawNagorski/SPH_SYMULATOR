@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.pytest_cache/
 
 # OS / editor artefakty
 .DS_Store
@@ -10,6 +11,9 @@ Thumbs.db
 *.swp
 *.swo
 
-# Phase 6 — report side effects (REPORT-01); see RESEARCH §C.7.
-# Każde uruchomienie symulacji tworzy ./reports/<timestamp>/. Lokalnie nie commitujemy.
+# Wyniki symulacji generowane przy każdym uruchomieniu (./reports/<timestamp>/)
 reports/
+
+# Workflow planowania i konfiguracja narzędzi lokalnych
+.planning/
+.claude/

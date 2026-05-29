@@ -1,9 +1,0 @@
-Sprawdz przewodnik.md za pomoca skilllla humanizer.  Z przewodnika uzus nawiazania do wymagan czy plikow .planning np "wpisujesz je sam (zgodnie z D-03)"
-Posprzątaj repozytorium.
-Usuń zbędne pliki, spraw aby repozytorium mogło byc udostepnione dla wykładowcy.
-Usuń z git ./planning i ./cloude.
-Usuń stare foldery
-
-
-
-
