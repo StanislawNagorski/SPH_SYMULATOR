@@ -113,4 +113,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-25 after bootstrap + start of milestone v1.1*
+*Last updated: 2026-05-29 — Phase 8 (Documentation + Interactive Tutorial) complete; milestone v1.1 Agent CLI ready for closeout (all 8 phases shipped, 5 UAT gaps closed via 08-08/09/10).*
