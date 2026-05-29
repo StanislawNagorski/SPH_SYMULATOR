@@ -180,8 +180,12 @@ class SPHShell(cmd.Cmd):
                 self._tutorial_state = None
         else:
             # Hint only when meaningful attempt: sim-producing step (result != None)
-            # OR display-only step (2/4/7 — no sim dependency).
-            if result is not None or ts.step in (2, 4, 7):
+            # OR display-only step (2/3/5/8 — no sim dependency, post UAT Gap 3 split).
+            #   - Step 2 (list strategies) — display-only.
+            #   - Step 3 (strategy details) — display-only, NEW after split.
+            #   - Step 5 (custom — display-only after load, no sim).
+            #   - Step 8 (report soft-pass — no sim dependency).
+            if result is not None or ts.step in (2, 3, 5, 8):
                 ts.hint_count += 1
                 self._last_sim_result = None  # reset niezależnie od passed/failed
                 if ts.hint_count <= ts.MAX_HINTS:
@@ -618,7 +622,7 @@ class SPHShell(cmd.Cmd):
 
     # ---- tutorial (Phase 8 Plan 08-04, TUT-01) ----
     def do_tutorial(self, arg):
-        """Uruchom interaktywny tutorial v1.1 (~8 kroków, ≤15 min)."""
+        """Uruchom interaktywny tutorial v1.1 (~9 kroków, ≤15 min)."""
         if self._tutorial_state is not None:
             print('Tutorial już jest aktywny. Wpisz `repeat` żeby zobaczyć bieżący krok, `exit` żeby wyjść.')
             return
@@ -628,7 +632,7 @@ class SPHShell(cmd.Cmd):
             '\n'
             '══════════════════════════════════════════════════════════\n'
             '  INTERAKTYWNY TUTORIAL SPH SYMULATORA v1.1\n'
-            '  ~8 kroków, ≤15 minut\n'
+            '  ~9 kroków, ≤15 minut\n'
             f'  {_TUTORIAL_CONTROLS_LINE}\n'
             '  `exit` wraca do REPL (stan zachowany), nie kończy sesji.\n'
             '  Wpisz `exit` ponownie żeby zakończyć REPL.\n'
