@@ -192,3 +192,21 @@ Komenda musi być w jednej linii, gotowa do skopiowania i wklejenia w terminalu.
 # ──────────────────────────────────────────────────────────────────
 
 Doadatkowo przygotuj krótkie podsumowanie statystyczne i opisowe w jaki sposób framework GSD został uzyty. Jakie modele zostaly zaanagazowane do rozwiązania i w jakich rolach. Jak przebiegał proces (planowanie, execucja, veryfikacja)
+
+
+
+
+------
+Agent:
+Na bazie tego projektu potrzebujemy stworzyc program CLI (lub web/offline ze skromym UI do dyskusji) ktory bedzie umoliwiał innym urzytkownikom własne testowanie tego problemu. Własny UI mógłby te pokazywać wyniki.
+Program powinien miec instrukcje /help.
+Program powinien pozwalac na zapoznanie sie z dostepnymi strategimi.
+Program powinien pozwalać na wszyskniecie własnej customowej strategii na podstawie jakiś warunków brzegowych.
+
+
+
+NotATKI:
+Agent wykonania (maszyna której decyzje testujemy) powinien móc przyjąc rekomendacje lub nie. Nalezy wykazac ze w chwili mozliwosci zysku ujemnego agent podejmuje decyzje o braku dzialania. 
+Program powinien dostarczac informacje o obecnych strategiach ich rozlozeniu oraz dodac mozliwosc wtrzykniecia customowych stategii (wg jakiegos formatu)
+Urzadzenie powinno miec mozliwość stworzenia własnej strategii i ją testować, na podstawie warunków brzegowych. Okreslic ramy.
+
