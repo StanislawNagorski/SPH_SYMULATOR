@@ -56,7 +56,7 @@ Sterowanie (4 komendy działają tylko w trybie tutorial):
 Przykładowy nagłówek kroku (tak wygląda krok w REPL):
 
 ```
-[krok 1/8 — Baseline]
+[krok 1/9 — Baseline]
 ══════════════════════════════════════════════════════════
 Uruchom symulację baseline dla strategii naive:
 
