@@ -206,6 +206,23 @@ class TestTutorialControls(unittest.TestCase):
         self.assertIn('Już jesteś na pierwszym kroku.', r.stdout,
                       msg=f'back boundary msg brakuje: {r.stdout[:1500]}')
 
+    def test_soft_pass_step_rejects_unknown_command(self):
+        """UAT Gap 4: typo on step 6 (soft-pass) must NOT auto-advance —
+        `Nieznana komenda` short-circuits check_step via _last_command_unknown."""
+        # Reach step 6 via 5 skips (steps 1→6).
+        r = _run_repl_interactive(
+            'tutorial\nskip\nskip\nskip\nskip\nskip\ntojesttypo\nexit\nexit\n'
+        )
+        self.assertEqual(r.returncode, 0,
+                         msg=f'REPL crashed rc={r.returncode}, stderr={r.stderr[:600]}')
+        self.assertIn('Nieznana komenda', r.stdout,
+                      msg=f'default() nie zarejestrował typo: {r.stdout[:2000]}')
+        self.assertNotIn('✓ zaliczone — krok 6/8', r.stdout,
+                         msg=f'typo nie powinien advance step 6: {r.stdout[:2000]}')
+        # Still on step 6 after typo (no advance, no implicit repeat needed).
+        self.assertIn('[krok 6/8', r.stdout,
+                      msg=f'step 6 banner nie widoczny: {r.stdout[:2000]}')
+
 
 class TestTutorialExit(unittest.TestCase):
     """TUT-04: 'exit' w trybie tutorial wraca do REPL, nie kończy procesu (Pitfall 1)."""
