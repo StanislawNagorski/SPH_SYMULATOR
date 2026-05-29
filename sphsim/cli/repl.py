@@ -57,9 +57,15 @@ INTRO = (
     "  Na podstawie: J. Konorski, MPE cz. 2, KT WETI\n"
     "==============================================================\n"
     "  Wpisz `help` żeby zobaczyć dostępne komendy.\n"
+    "  Wpisz `tutorial` żeby uruchomić interaktywny tutorial v1.1 (≤15 min).\n"
     "  Wpisz `exit` lub Ctrl+D żeby zakończyć.\n"
     "=============================================================="
 )
+
+# Phase 8 gap-closure (UAT Gap 2): single source of truth dla linii sterowania
+# tutoriala — używana zarówno w banerze do_tutorial jak i w stopce każdego kroku
+# (_show_tutorial_step). DRY — definicja literała w jednym miejscu.
+_TUTORIAL_CONTROLS_LINE = "Sterowanie: skip | back | repeat | exit"
 
 
 class SPHShell(cmd.Cmd):
@@ -75,6 +81,10 @@ class SPHShell(cmd.Cmd):
         super().__init__(*args, **kwargs)
         self._tutorial_state = None  # TutorialFlow | None — active gdy do_tutorial wywołane
         self._last_sim_result = None  # set przez do_run/do_compare/do_batch na success path
+        # Phase 8 gap-closure (UAT Gap 4): set by default() when cmd.Cmd cannot
+        # parse the line. postcmd reads + resets to short-circuit check_step
+        # BEFORE soft-pass steps 6/7 falsely accept the garbage input.
+        self._last_command_unknown = False
 
     # ---- emptyline (Phase 8 CR-01 fix) ----
     def emptyline(self):
@@ -130,6 +140,10 @@ class SPHShell(cmd.Cmd):
             self._tutorial_state = None
             return ''
 
+        # Phase 8 gap-closure (UAT Gap 4): reset BEFORE dispatch so default()
+        # is the only path that sets _last_command_unknown=True. Single reset
+        # point avoids editing every do_* method.
+        self._last_command_unknown = False
         return line
 
     # ---- postcmd (Phase 8 Plan 08-04, RESEARCH §Pattern 3) ----
@@ -137,6 +151,12 @@ class SPHShell(cmd.Cmd):
     # (precmd short-circuit produkuje ''). Pitfall 3: consume _last_sim_result.
     def postcmd(self, stop, line):
         if not line.strip() or self._tutorial_state is None or stop:
+            return stop
+        # Phase 8 gap-closure (UAT Gap 4): if default() flagged the previous
+        # line as Nieznana komenda, do NOT advance the tutorial — soft-pass
+        # steps 6/7 must not accept garbage that cmd.Cmd refused to parse.
+        if self._last_command_unknown:
+            self._last_command_unknown = False
             return stop
         ts = self._tutorial_state
         result = self._last_sim_result
@@ -579,6 +599,10 @@ class SPHShell(cmd.Cmd):
         print('══════════════════════════════════════════════════════════')
         print(task.description)
         print('══════════════════════════════════════════════════════════')
+        # Phase 8 gap-closure (UAT Gap 2): show control verbs on every step
+        # display, not only the entry banner. Reuses the module-level constant
+        # so the literal stays in one place.
+        print(_TUTORIAL_CONTROLS_LINE)
         # Note: step 6 jest soft-pass informational step (Plan 03 / Open Question #2
         # resolution). Zero filesystem snapshot — check_step(6, line, ...) zwraca
         # True dla dowolnej non-empty linii.
@@ -605,7 +629,7 @@ class SPHShell(cmd.Cmd):
             '══════════════════════════════════════════════════════════\n'
             '  INTERAKTYWNY TUTORIAL SPH SYMULATORA v1.1\n'
             '  ~8 kroków, ≤15 minut\n'
-            '  Sterowanie: skip | back | repeat | exit\n'
+            f'  {_TUTORIAL_CONTROLS_LINE}\n'
             '  `exit` wraca do REPL (stan zachowany), nie kończy sesji.\n'
             '  Wpisz `exit` ponownie żeby zakończyć REPL.\n'
             '══════════════════════════════════════════════════════════'
@@ -615,6 +639,10 @@ class SPHShell(cmd.Cmd):
     # ---- default — nieznana komenda (D-30) ----
     def default(self, line):
         """Override cmd.Cmd default — Polski komunikat dla nieznanych komend."""
+        # Phase 8 gap-closure (UAT Gap 4): record that cmd.Cmd refused to
+        # dispatch this line. postcmd reads + resets the flag to short-circuit
+        # check_step (otherwise soft-pass steps 6/7 falsely advance on typos).
+        self._last_command_unknown = True
         # cmd.Cmd przekazuje surową linię (bez trailing newline w większości wersji),
         # ale dla bezpieczeństwa stripujemy.
         text = line.strip() if isinstance(line, str) else str(line)
