@@ -10,3 +10,7 @@
 matplotlib>=3.10.0
 numpy>=2.3.0
 scipy>=1.16.0
+
+# Windows: stdlib 'readline' nie istnieje na Windows — pyreadline3 dostarcza zamiennik.
+# Na Linux/macOS pyreadline3 jest ignorowany (readline jest wbudowany).
+pyreadline3>=3.4.1; sys_platform == "win32"
