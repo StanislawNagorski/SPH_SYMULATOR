@@ -107,4 +107,4 @@ def strategy_adaptive_profit(dev, l, s, phi, kappa, rho, h, p, **kwargs):
     zeta_final = zeta_buf * profit_multiplier
     zeta_final = max(0.0, min(1.0, zeta_final))
 
-    return "commit" if random.random() < zeta_final else "abstain"
+    return "COMMIT" if random.random() < zeta_final else "ABSTAIN"
