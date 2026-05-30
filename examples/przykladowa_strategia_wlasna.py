@@ -3,7 +3,7 @@ Przykladowa strategia wlasna: adaptive_profit
 =============================================
 Autorzy: Mikolaj Rutkowski, Stanislaw Nagorski
 
-Strategia lacazy dwa sygnaly:
+Strategia łączy dwa sygnały:
   1. Zajetosc bufora SUS (s) — im mniej w buforze, tym bardziej agresywny COMMIT
   2. Oczekiwany zysk netto E[pi_i] — faworyzuje fazy z lepszym stosunkiem zysk/ryzyko
 
