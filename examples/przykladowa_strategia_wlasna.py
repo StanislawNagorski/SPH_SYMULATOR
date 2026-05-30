@@ -77,7 +77,7 @@ def strategy_adaptive_profit(dev, l, s, phi, kappa, rho, h, p, **kwargs):
 
     # Faza 5: phi=1.0 -> awaria gwarantowana -> zawsze ABSTAIN
     if i >= 5:
-        return "abstain"
+        return "ABSTAIN"
 
     # --- Wyodrebnij platnosc dla biezacej fazy ---
     if isinstance(p, dict):
